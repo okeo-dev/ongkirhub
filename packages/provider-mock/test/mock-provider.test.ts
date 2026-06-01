@@ -10,8 +10,18 @@ describe("mock provider", () => {
   it("returns deterministic quotes for the same route", async () => {
     const provider = createMockProvider();
     const request = {
-      origin: { city: "Jakarta" },
-      destination: { city: "Bandung" },
+      origin: {
+        method: "location",
+        countryCode: "ID",
+        level1: "DKI Jakarta",
+        level2: "Jakarta Pusat",
+      },
+      destination: {
+        method: "location",
+        countryCode: "ID",
+        level1: "Jawa Barat",
+        level2: "Bandung",
+      },
       parcels: [{ weightGrams: 1500 }],
       totalWeightGrams: 1500,
     };

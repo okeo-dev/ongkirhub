@@ -1,11 +1,9 @@
 import { ProviderError } from "../errors/provider-errors.js";
-import type { Address, Parcel, QuoteRequest } from "../types/shipment.js";
-
-function assertAddress(value: unknown, field: string): asserts value is Address {
-  if (value === null || typeof value !== "object") {
-    throw new ProviderError("INVALID_REQUEST", `${field} must be an object`);
-  }
-}
+import {
+  LocationValidationError,
+  validateLocationInput,
+} from "../location/input.js";
+import type { Parcel, QuoteRequest } from "../types/shipment.js";
 
 function assertParcel(value: unknown, index: number): asserts value is Parcel {
   if (value === null || typeof value !== "object") {
@@ -27,6 +25,17 @@ function assertParcel(value: unknown, index: number): asserts value is Parcel {
   }
 }
 
+function assertLocation(value: unknown, field: string) {
+  try {
+    return validateLocationInput(value, field);
+  } catch (error) {
+    if (error instanceof LocationValidationError) {
+      throw new ProviderError("INVALID_REQUEST", error.message);
+    }
+    throw error;
+  }
+}
+
 export function validateQuoteRequest(input: unknown): QuoteRequest {
   if (input === null || typeof input !== "object") {
     throw new ProviderError("INVALID_REQUEST", "Request body must be an object");
@@ -34,8 +43,8 @@ export function validateQuoteRequest(input: unknown): QuoteRequest {
 
   const body = input as Record<string, unknown>;
 
-  assertAddress(body.origin, "origin");
-  assertAddress(body.destination, "destination");
+  const origin = assertLocation(body.origin, "origin");
+  const destination = assertLocation(body.destination, "destination");
 
   if (!Array.isArray(body.parcels) || body.parcels.length === 0) {
     throw new ProviderError(
@@ -58,8 +67,8 @@ export function validateQuoteRequest(input: unknown): QuoteRequest {
   }
 
   return {
-    origin: body.origin as Address,
-    destination: body.destination as Address,
+    origin,
+    destination,
     parcels: body.parcels as Parcel[],
     totalWeightGrams: body.totalWeightGrams,
     declaredValue: body.declaredValue as QuoteRequest["declaredValue"],

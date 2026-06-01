@@ -7,8 +7,18 @@ export interface ProviderConformanceOptions {
 }
 
 const defaultSampleRequest: QuoteRequest = {
-  origin: { country: "ID", province: "DKI Jakarta", city: "Jakarta Pusat" },
-  destination: { country: "ID", province: "Jawa Barat", city: "Bandung" },
+  origin: {
+    method: "location",
+    countryCode: "ID",
+    level1: "DKI Jakarta",
+    level2: "Jakarta Pusat",
+  },
+  destination: {
+    method: "location",
+    countryCode: "ID",
+    level1: "Jawa Barat",
+    level2: "Bandung",
+  },
   parcels: [{ weightGrams: 1000 }],
   totalWeightGrams: 1000,
 };

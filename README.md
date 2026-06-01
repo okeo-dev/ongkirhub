@@ -9,7 +9,7 @@ Included:
 - Normalized **rates and ETA** quotes
 - `@ongkirhub/core` provider contract
 - `@ongkirhub/api` HTTP server (`GET /health`, `POST /v0/quotes`)
-- Reference providers: `mock` (deterministic) and `manual` (configurable static rates)
+- Reference providers: `mock` (deterministic), `manual` (configurable static rates), and optional `rajaongkir` (RajaOngkir domestic rates)
 
 Not included yet:
 
@@ -35,8 +35,18 @@ curl -s http://localhost:3000/v0/quotes \
   -H 'content-type: application/json' \
   -d '{
     "providers": ["mock", "manual"],
-    "origin": { "city": "Jakarta", "province": "DKI Jakarta" },
-    "destination": { "city": "Bandung", "province": "Jawa Barat" },
+    "origin": {
+      "method": "location",
+      "countryCode": "ID",
+      "level1": "DKI Jakarta",
+      "level2": "Jakarta Pusat"
+    },
+    "destination": {
+      "method": "location",
+      "countryCode": "ID",
+      "level1": "Jawa Barat",
+      "level2": "Bandung"
+    },
     "parcels": [{ "weightGrams": 1500 }],
     "totalWeightGrams": 1500
   }' | jq
@@ -57,8 +67,26 @@ docker run --rm -p 3000:3000 ongkirhub
 | `@ongkirhub/api` | Publishable HTTP API and provider registry composition |
 | `@ongkirhub/provider-mock` | Deterministic development provider |
 | `@ongkirhub/provider-manual` | Configurable static-rate provider |
+| `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic rates (optional, API-composed) |
 
 Dependency rule: **providers depend on `core` only**, never on `api`.
+
+### Enable RajaOngkir (optional)
+
+Add `rajaongkir` to `ENABLED_PROVIDERS` and set RajaOngkir credentials. The location dataset ships compiled inside `@ongkirhub/provider-rajaongkir` (no YAML parsing at API startup).
+
+```bash
+export ENABLED_PROVIDERS=mock,rajaongkir
+export RAJAONGKIR_API_KEY=your-api-key
+export RAJAONGKIR_COURIERS=jne,pos
+# optional:
+# export RAJAONGKIR_BASE_URL=https://rajaongkir.komerce.id/api/v1
+pnpm dev
+```
+
+If `rajaongkir` is not listed in `ENABLED_PROVIDERS`, RajaOngkir env vars are not required.
+
+The current RajaOngkir location dataset is a bootstrap artifact. Future dataset refreshes should come from RajaOngkir APIs, not historical local source files.
 
 ## Project status
 

@@ -13,7 +13,7 @@ export function createApp(options: {
   registry?: ProviderRegistry;
 }): Hono {
   const registry =
-    options.registry ?? createProviderRegistry(options.env.enabledProviders);
+    options.registry ?? createProviderRegistry(options.env);
   const version = options.version ?? "0.1.0";
 
   const app = new Hono();

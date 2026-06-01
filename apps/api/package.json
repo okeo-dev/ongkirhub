@@ -29,6 +29,7 @@
     "@ongkirhub/core": "workspace:*",
     "@ongkirhub/provider-manual": "workspace:*",
     "@ongkirhub/provider-mock": "workspace:*",
+    "@ongkirhub/provider-rajaongkir": "workspace:*",
     "hono": "^4.7.2",
     "zod": "^3.24.2"
   },

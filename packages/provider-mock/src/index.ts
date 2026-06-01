@@ -6,9 +6,16 @@ import type {
 } from "@ongkirhub/core";
 
 function routeSeed(request: QuoteRequest): number {
-  const origin = request.origin.city ?? request.origin.province ?? "origin";
+  const origin =
+    request.origin.postalCode ??
+    request.origin.level2 ??
+    request.origin.level1 ??
+    request.origin.countryCode;
   const destination =
-    request.destination.city ?? request.destination.province ?? "destination";
+    request.destination.postalCode ??
+    request.destination.level2 ??
+    request.destination.level1 ??
+    request.destination.countryCode;
   const raw = `${origin}:${destination}:${request.totalWeightGrams}`;
   let hash = 0;
   for (const char of raw) {

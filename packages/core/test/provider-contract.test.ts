@@ -60,8 +60,18 @@ describe("assertProviderConformance", () => {
   it("validates custom sample requests", async () => {
     const provider = createStubProvider([]);
     const invalidRequest = {
-      origin: { city: "Jakarta" },
-      destination: { city: "Bandung" },
+      origin: {
+        method: "location",
+        countryCode: "ID",
+        level1: "DKI Jakarta",
+        level2: "Jakarta Pusat",
+      },
+      destination: {
+        method: "location",
+        countryCode: "ID",
+        level1: "Jawa Barat",
+        level2: "Bandung",
+      },
       parcels: [],
       totalWeightGrams: 1000,
     } as QuoteRequest;

@@ -1,11 +1,4 @@
-export interface Address {
-  country?: string;
-  province?: string;
-  city?: string;
-  district?: string;
-  postalCode?: string;
-  addressLine?: string;
-}
+import type { LocationInput } from "../location/input.js";
 
 export interface Dimensions {
   lengthCm: number;
@@ -25,8 +18,8 @@ export interface Money {
 }
 
 export interface QuoteRequest {
-  origin: Address;
-  destination: Address;
+  origin: LocationInput;
+  destination: LocationInput;
   parcels: Parcel[];
   totalWeightGrams: number;
   declaredValue?: Money;

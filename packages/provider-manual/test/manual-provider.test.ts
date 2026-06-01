@@ -34,15 +34,35 @@ describe("manual provider", () => {
     });
 
     const light = await provider.getQuotes({
-      origin: { city: "Jakarta" },
-      destination: { city: "Surabaya" },
+      origin: {
+        method: "location",
+        countryCode: "ID",
+        level1: "DKI Jakarta",
+        level2: "Jakarta Pusat",
+      },
+      destination: {
+        method: "location",
+        countryCode: "ID",
+        level1: "Jawa Timur",
+        level2: "Surabaya",
+      },
       parcels: [{ weightGrams: 500 }],
       totalWeightGrams: 500,
     });
 
     const heavy = await provider.getQuotes({
-      origin: { city: "Jakarta" },
-      destination: { city: "Surabaya" },
+      origin: {
+        method: "location",
+        countryCode: "ID",
+        level1: "DKI Jakarta",
+        level2: "Jakarta Pusat",
+      },
+      destination: {
+        method: "location",
+        countryCode: "ID",
+        level1: "Jawa Timur",
+        level2: "Surabaya",
+      },
       parcels: [{ weightGrams: 2000 }],
       totalWeightGrams: 2000,
     });

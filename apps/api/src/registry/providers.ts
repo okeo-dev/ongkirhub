@@ -1,33 +1,52 @@
 import type { ShippingProvider } from "@ongkirhub/core";
 import { defaultManualProvider } from "@ongkirhub/provider-manual";
 import { mockProvider } from "@ongkirhub/provider-mock";
+import {
+  createRajaOngkirProvider,
+  RAJAONGKIR_LOCATION_RECORDS,
+} from "@ongkirhub/provider-rajaongkir";
+import type { ApiEnv } from "../config/env.js";
 
-export const BUILT_IN_PROVIDER_KEYS = ["mock", "manual"] as const;
+export const BUILT_IN_PROVIDER_KEYS = ["mock", "manual", "rajaongkir"] as const;
 
-const builtInProviders: Record<
-  (typeof BUILT_IN_PROVIDER_KEYS)[number],
-  ShippingProvider
-> = {
+const staticProviders: Record<"mock" | "manual", ShippingProvider> = {
   mock: mockProvider,
   manual: defaultManualProvider,
 };
 
-export function createProviderRegistry(
-  enabledKeys: string[],
-): Map<string, ShippingProvider> {
-  const unknownKeys = enabledKeys.filter(
-    (key) => !Object.hasOwn(builtInProviders, key),
-  );
+export function createProviderRegistry(env: ApiEnv): Map<string, ShippingProvider> {
+  const { enabledProviders, rajaongkir } = env;
+  const knownKeys = new Set<string>(BUILT_IN_PROVIDER_KEYS);
+  const unknownKeys = enabledProviders.filter((key) => !knownKeys.has(key));
   if (unknownKeys.length > 0) {
     throw new Error(
       `Unknown provider key(s) in ENABLED_PROVIDERS: ${unknownKeys.join(", ")}`,
     );
   }
 
+  if (enabledProviders.includes("rajaongkir") && !rajaongkir) {
+    throw new Error(
+      "RajaOngkir is enabled in ENABLED_PROVIDERS but RajaOngkir configuration is missing",
+    );
+  }
+
   const registry = new Map<string, ShippingProvider>();
 
-  for (const key of enabledKeys) {
-    registry.set(key, builtInProviders[key as keyof typeof builtInProviders]);
+  for (const key of enabledProviders) {
+    if (key === "rajaongkir") {
+      registry.set(
+        key,
+        createRajaOngkirProvider({
+          apiKey: rajaongkir!.apiKey,
+          couriers: rajaongkir!.couriers,
+          baseUrl: rajaongkir!.baseUrl,
+          records: RAJAONGKIR_LOCATION_RECORDS,
+        }),
+      );
+      continue;
+    }
+
+    registry.set(key, staticProviders[key as keyof typeof staticProviders]);
   }
 
   return registry;
