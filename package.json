@@ -1,0 +1,22 @@
+{
+  "name": "ongkirhub",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "dev": "pnpm --filter @ongkirhub/api dev",
+    "test": "pnpm build && pnpm -r --sequential run test",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "clean": "pnpm -r exec rm -rf dist"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.12",
+    "pnpm": "9.15.4",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
