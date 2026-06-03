@@ -10,16 +10,25 @@ import {
   type RajaOngkirProviderConfig,
   validateRajaOngkirProviderConfig,
 } from "./config.js";
-import { RAJAONGKIR_PROVIDER_KEY, resolveDistrict } from "./location/resolve.js";
+import {
+  RAJAONGKIR_PROVIDER_KEY,
+  extractRajaOngkirApiId,
+  resolveDistrict,
+} from "./location/resolve.js";
 import { mapRajaOngkirCostsToQuotes } from "./quotes.js";
+
+export interface RajaOngkirProvider extends ShippingProvider {
+  getDebugInfo?(): object;
+}
 
 export function createRajaOngkirProvider(
   config: RajaOngkirProviderConfig,
-): ShippingProvider {
+): RajaOngkirProvider {
   const validated = validateRajaOngkirProviderConfig(config);
   const client = new RajaOngkirClient({
     apiKey: validated.apiKey,
     baseUrl: validated.baseUrl,
+    debug: validated.debug,
   });
 
   const capabilities: ProviderCapabilities = {
@@ -29,7 +38,9 @@ export function createRajaOngkirProvider(
     serviceFilteringSupported: false,
   };
 
-  return {
+  let lastDebugInfo: object | undefined;
+
+  const provider: RajaOngkirProvider = {
     key: RAJAONGKIR_PROVIDER_KEY,
     name: "RajaOngkir",
     capabilities,
@@ -48,9 +59,21 @@ export function createRajaOngkirProvider(
         validated.records,
       );
 
-      const costs = await client.calculateDistrictDomesticCost({
-        originDistrictId: origin.providerId,
-        destinationDistrictId: destination.providerId,
+      const originId = extractRajaOngkirApiId(origin.providerId);
+      const destinationId = extractRajaOngkirApiId(destination.providerId);
+
+      if (validated.debug) {
+        lastDebugInfo = {
+          originId,
+          destinationId,
+          weightGrams: request.totalWeightGrams,
+          couriers: validated.couriers,
+        };
+      }
+
+      const costs = await client.calculateDomesticCost({
+        originId,
+        destinationId,
         weightGrams: request.totalWeightGrams,
         couriers: validated.couriers,
       });
@@ -58,4 +81,10 @@ export function createRajaOngkirProvider(
       return mapRajaOngkirCostsToQuotes(costs);
     },
   };
+
+  if (validated.debug) {
+    provider.getDebugInfo = () => lastDebugInfo ?? {};
+  }
+
+  return provider;
 }

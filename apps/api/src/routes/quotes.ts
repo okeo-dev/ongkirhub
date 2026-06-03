@@ -81,9 +81,25 @@ export function registerQuotesRoute(
       }
     }
 
+    const debug: Record<string, object> = {};
+    for (const provider of selectedProviders) {
+      const maybeDebug = (provider as unknown as Record<string, unknown>).getDebugInfo;
+      if (typeof maybeDebug === "function") {
+        const info = (maybeDebug as () => object)();
+        if (info && Object.keys(info).length > 0) {
+          debug[provider.key] = info;
+        }
+      }
+    }
+
     const response: QuotesResponseBody = {
       quotes,
       providers: selectedProviders.map((provider) => provider.key),
+      requestSummary: {
+        origin: quoteRequest.origin,
+        destination: quoteRequest.destination,
+      },
+      ...(Object.keys(debug).length > 0 ? { debug } : {}),
     };
 
     return context.json(response);

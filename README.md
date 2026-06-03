@@ -86,6 +86,19 @@ pnpm dev
 
 If `rajaongkir` is not listed in `ENABLED_PROVIDERS`, RajaOngkir env vars are not required.
 
+#### RajaOngkir debug mode
+
+Set `RAJAONGKIR_DEBUG=1` to enable provider-local request/response diagnostics:
+
+```bash
+export RAJAONGKIR_DEBUG=1
+```
+
+- Disabled by default.
+- When enabled, RajaOngkir request/response logs are emitted to `stdout` for troubleshooting.
+- API keys and auth headers are never logged.
+- When enabled, the `/v0/quotes` response envelope includes a `debug.rajaongkir` object with resolved `originId`, `destinationId`, and request parameters.
+
 The current RajaOngkir location dataset is a bootstrap artifact. Future dataset refreshes should come from RajaOngkir APIs, not historical local source files.
 
 ## Project status

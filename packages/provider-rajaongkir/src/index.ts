@@ -5,12 +5,15 @@ export {
 } from "./config.js";
 export {
   RajaOngkirClient,
-  type CalculateDistrictCostParams,
+  type CalculateDomesticCostParams,
   type FetchFn,
   type RajaOngkirClientConfig,
   type RajaOngkirCostItem,
 } from "./client.js";
-export { createRajaOngkirProvider } from "./provider.js";
+export {
+  createRajaOngkirProvider,
+  type RajaOngkirProvider,
+} from "./provider.js";
 export { mapRajaOngkirCostsToQuotes, parseEstimatedDuration } from "./quotes.js";
 export {
   compileYamlSourceToRecords,

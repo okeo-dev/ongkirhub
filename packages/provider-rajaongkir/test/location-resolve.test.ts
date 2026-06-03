@@ -1,117 +1,186 @@
 import { describe, expect, it } from "vitest";
 import { ProviderError } from "@ongkirhub/core";
 import { compileYamlSourceToRecords } from "../src/location/compile.js";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { resolveDistrict } from "../src/location/resolve.js";
 
-const yamlSource = readFileSync(
-  join(import.meta.dirname, "../src/location/source/locations.yaml"),
-  "utf8",
-);
-const records = compileYamlSourceToRecords(yamlSource);
+function makeRecords() {
+  return compileYamlSourceToRecords(`
+provider: rajaongkir
+version: "1"
+countries:
+  - countryCode: ID
+    nodes:
+      - providerId: "p1"
+        name: DKI JAKARTA
+        children:
+          - providerId: "c1"
+            name: KOTA JAKARTA BARAT
+            aliases:
+              - JAKARTA BARAT
+            children:
+              - providerId: "d1"
+                name: GROGOL PETAMBURAN
+                children:
+                  - providerId: "100"
+                    name: GROGOL
+                  - providerId: "101"
+                    name: JELAMBAR
+              - providerId: "d2"
+                name: TAMAN SARI
+                children:
+                  - providerId: "102"
+                    name: PINANGSIA
+      - providerId: "p2"
+        name: JAWA BARAT
+        children:
+          - providerId: "c2"
+            name: KOTA BANDUNG
+            aliases:
+              - BANDUNG
+            children:
+              - providerId: "d3"
+                name: COBLONG
+                children:
+                  - providerId: "200"
+                    name: CICADAS
+                    postalCodes:
+                      - "40132"
+                  - providerId: "201"
+                    name: SUKAPURA
+`);
+}
 
-describe("resolveDistrict", () => {
-  it("resolves canonical hierarchy to a district", () => {
-    const district = resolveDistrict(
+describe("resolveDistrict (level4 leaf)", () => {
+  it("resolves canonical hierarchy to a subdistrict", () => {
+    const records = makeRecords();
+    const subdistrict = resolveDistrict(
       {
         method: "location",
         countryCode: "ID",
         level1: "DKI Jakarta",
         level2: "Kota Jakarta Barat",
         level3: "Grogol Petamburan",
+        level4: "Grogol",
       },
       records,
     );
-    expect(district.providerId).toBe("2088");
+    expect(subdistrict.providerId).toBe("100");
   });
 
-  it("resolves via level2 alias and level3 alias", () => {
-    const district = resolveDistrict(
+  it("resolves via level2 alias and level4 name", () => {
+    const records = makeRecords();
+    const subdistrict = resolveDistrict(
       {
         method: "location",
         countryCode: "ID",
         level1: "Jawa Barat",
         level2: "Bandung",
-        level3: "Cicadas",
+        level3: "Coblong",
+        level4: "Cicadas",
       },
       records,
     );
-    expect(district.providerId).toBe("339");
+    expect(subdistrict.providerId).toBe("200");
   });
 
   it("resolves via postal code when unique", () => {
-    const syntheticRecords = compileYamlSourceToRecords(`
-provider: rajaongkir
-version: "1"
-countries:
-  - countryCode: ID
-    nodes:
-      - providerId: "p1"
-        name: PROV
-        children:
-          - providerId: "c1"
-            name: KOTA CITY
-            aliases:
-              - CITY
-            children:
-              - providerId: "100"
-                name: DISTRICT A
-                postalCodes:
-                  - "12345"
-              - providerId: "101"
-                name: DISTRICT B
-`);
-
-    const district = resolveDistrict(
+    const records = makeRecords();
+    const subdistrict = resolveDistrict(
       {
         method: "location",
         countryCode: "ID",
-        postalCode: "12345",
-        level1: "PROV",
-        level2: "KOTA CITY",
+        postalCode: "40132",
+        level1: "Jawa Barat",
+        level2: "Kota Bandung",
       },
-      syntheticRecords,
+      records,
     );
-    expect(district.providerId).toBe("100");
+    expect(subdistrict.providerId).toBe("200");
   });
 
   it("resolves via unique postal code without hierarchy hints", () => {
-    const syntheticRecords = compileYamlSourceToRecords(`
-provider: rajaongkir
-version: "1"
-countries:
-  - countryCode: ID
-    nodes:
-      - providerId: "p1"
-        name: PROV
-        children:
-          - providerId: "c1"
-            name: KOTA CITY
-            aliases:
-              - CITY
-            children:
-              - providerId: "100"
-                name: DISTRICT A
-                postalCodes:
-                  - "12345"
-              - providerId: "101"
-                name: DISTRICT B
-`);
-
-    const district = resolveDistrict(
+    const records = makeRecords();
+    const subdistrict = resolveDistrict(
       {
         method: "location",
         countryCode: "ID",
-        postalCode: "12345",
+        postalCode: "40132",
       },
-      syntheticRecords,
+      records,
     );
-    expect(district.providerId).toBe("100");
+    expect(subdistrict.providerId).toBe("200");
   });
 
   it("throws LOCATION_NOT_FOUND when postal code contradicts hierarchy", () => {
-    const syntheticRecords = compileYamlSourceToRecords(`
+    const records = makeRecords();
+    expect(() =>
+      resolveDistrict(
+        {
+          method: "location",
+          countryCode: "ID",
+          postalCode: "40132",
+          level1: "Jawa Barat",
+          level2: "Kota Bandung",
+          level3: "Coblong",
+          level4: "Sukapura",
+        },
+        records,
+      ),
+    ).toThrow(ProviderError);
+
+    try {
+      resolveDistrict(
+        {
+          method: "location",
+          countryCode: "ID",
+          postalCode: "40132",
+          level1: "Jawa Barat",
+          level2: "Kota Bandung",
+          level3: "Coblong",
+          level4: "Sukapura",
+        },
+        records,
+      );
+    } catch (error) {
+      expect(error).toMatchObject({ code: "LOCATION_NOT_FOUND" });
+    }
+  });
+
+  it("throws LOCATION_NOT_FOUND when subdistrict cannot be resolved", () => {
+    const records = makeRecords();
+    expect(() =>
+      resolveDistrict(
+        {
+          method: "location",
+          countryCode: "ID",
+          level1: "DKI Jakarta",
+          level2: "Kota Jakarta Barat",
+          level3: "Grogol Petamburan",
+          level4: "Unknown Subdistrict",
+        },
+        records,
+      ),
+    ).toThrow(ProviderError);
+
+    try {
+      resolveDistrict(
+        {
+          method: "location",
+          countryCode: "ID",
+          level1: "DKI Jakarta",
+          level2: "Kota Jakarta Barat",
+          level3: "Grogol Petamburan",
+          level4: "Unknown Subdistrict",
+        },
+        records,
+      );
+    } catch (error) {
+      expect(error).toMatchObject({ code: "LOCATION_NOT_FOUND" });
+    }
+  });
+
+  it("throws LOCATION_AMBIGUOUS when postal code ties subdistricts", () => {
+    const records = compileYamlSourceToRecords(`
 provider: rajaongkir
 version: "1"
 countries:
@@ -121,98 +190,17 @@ countries:
         name: PROV
         children:
           - providerId: "c1"
-            name: KOTA CITY
-            aliases:
-              - CITY
-            children:
-              - providerId: "100"
-                name: DISTRICT A
-                postalCodes:
-                  - "12345"
-              - providerId: "101"
-                name: DISTRICT B
-`);
-
-    expect(() =>
-      resolveDistrict(
-        {
-          method: "location",
-          countryCode: "ID",
-          postalCode: "12345",
-          level1: "PROV",
-          level2: "KOTA CITY",
-          level3: "DISTRICT B",
-        },
-        syntheticRecords,
-      ),
-    ).toThrow(ProviderError);
-
-    try {
-      resolveDistrict(
-        {
-          method: "location",
-          countryCode: "ID",
-          postalCode: "12345",
-          level1: "PROV",
-          level2: "KOTA CITY",
-          level3: "DISTRICT B",
-        },
-        syntheticRecords,
-      );
-    } catch (error) {
-      expect(error).toMatchObject({ code: "LOCATION_NOT_FOUND" });
-    }
-  });
-
-  it("throws LOCATION_NOT_FOUND when district cannot be resolved", () => {
-    expect(() =>
-      resolveDistrict(
-        {
-          method: "location",
-          countryCode: "ID",
-          level1: "DKI Jakarta",
-          level2: "Kota Jakarta Barat",
-          level3: "Unknown District",
-        },
-        records,
-      ),
-    ).toThrow(ProviderError);
-
-    try {
-      resolveDistrict(
-        {
-          method: "location",
-          countryCode: "ID",
-          level1: "DKI Jakarta",
-          level2: "Kota Jakarta Barat",
-          level3: "Unknown District",
-        },
-        records,
-      );
-    } catch (error) {
-      expect(error).toMatchObject({ code: "LOCATION_NOT_FOUND" });
-    }
-  });
-
-  it("throws LOCATION_AMBIGUOUS when postal code ties districts", () => {
-    const ambiguousRecords = compileYamlSourceToRecords(`
-provider: rajaongkir
-version: "1"
-countries:
-  - countryCode: ID
-    nodes:
-      - providerId: "1"
-        name: PROV
-        children:
-          - providerId: "2"
             name: CITY
             children:
-              - providerId: "10"
+              - providerId: "d1"
                 name: DISTRICT A
-                postalCodes: ["99999"]
-              - providerId: "11"
-                name: DISTRICT B
-                postalCodes: ["99999"]
+                children:
+                  - providerId: "10"
+                    name: SUB A
+                    postalCodes: ["99999"]
+                  - providerId: "11"
+                    name: SUB B
+                    postalCodes: ["99999"]
 `);
 
     expect(() =>
@@ -224,10 +212,8 @@ countries:
           level1: "PROV",
           level2: "CITY",
         },
-        ambiguousRecords,
+        records,
       ),
-    ).toThrow(
-      expect.objectContaining({ code: "LOCATION_AMBIGUOUS" }),
-    );
+    ).toThrow(expect.objectContaining({ code: "LOCATION_AMBIGUOUS" }));
   });
 });

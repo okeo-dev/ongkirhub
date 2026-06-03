@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app.js";
 import { loadEnv } from "../src/config/env.js";
 import { createProviderRegistry } from "../src/registry/providers.js";
@@ -22,6 +22,11 @@ const rajaongkirEnv = {
   ENABLED_PROVIDERS: "rajaongkir",
   RAJAONGKIR_API_KEY: "test-api-key",
   RAJAONGKIR_COURIERS: "jne,pos",
+};
+
+const rajaongkirDebugEnv = {
+  ...rajaongkirEnv,
+  RAJAONGKIR_DEBUG: "1",
 };
 
 describe("loadEnv", () => {
@@ -56,6 +61,7 @@ describe("loadEnv", () => {
     expect(env.rajaongkir).toEqual({
       apiKey: "test-api-key",
       couriers: ["jne", "pos"],
+      debug: false,
       baseUrl: "https://example.test/api/v1",
     });
   });
@@ -118,6 +124,81 @@ describe("quotes API", () => {
     expect(JSON.stringify(body)).not.toMatch(/test-api-key/);
   });
 
+  it("includes provider debug metadata when RajaOngkir debug is enabled", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          meta: { status: "success", code: 200 },
+          data: [
+            {
+              name: "JNE",
+              code: "jne",
+              service: "REG",
+              description: "JNE Regular",
+              cost: 12000,
+              etd: "1 day",
+            },
+          ],
+        }),
+      }),
+    );
+
+    try {
+      const rajaEnv = loadEnv(rajaongkirDebugEnv);
+      const rajaRegistry = createProviderRegistry(rajaEnv);
+      const rajaApp = createApp({
+        env: rajaEnv,
+        registry: rajaRegistry,
+        version: "test",
+      });
+
+      const response = await rajaApp.request("/v0/quotes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          providers: ["rajaongkir"],
+          origin: {
+            method: "location",
+            countryCode: "ID",
+            level1: "Nusa Tenggara Barat (NTB)",
+            level2: "Mataram",
+            level3: "Mataram",
+            level4: "Mataram Timur",
+          },
+          destination: {
+            method: "location",
+            countryCode: "ID",
+            level1: "Nusa Tenggara Barat (NTB)",
+            level2: "Mataram",
+            level3: "Ampenan",
+            level4: "Ampenan Selatan",
+          },
+          parcels: [{ weightGrams: 1000 }],
+          totalWeightGrams: 1000,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.requestSummary).toMatchObject({
+        origin: { countryCode: "ID", level1: "Nusa Tenggara Barat (NTB)", level2: "Mataram", level3: "Mataram", level4: "Mataram Timur" },
+        destination: { countryCode: "ID", level1: "Nusa Tenggara Barat (NTB)", level2: "Mataram", level3: "Ampenan", level4: "Ampenan Selatan" },
+      });
+      expect(body.debug).toBeDefined();
+      expect(body.debug.rajaongkir).toMatchObject({
+        originId: expect.any(String),
+        destinationId: expect.any(String),
+        weightGrams: 1000,
+        couriers: ["jne", "pos"],
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("returns normalized quotes from configured providers", async () => {
     const response = await app.request("/v0/quotes", {
       method: "POST",
@@ -140,6 +221,11 @@ describe("quotes API", () => {
       serviceCode: expect.any(String),
       price: { amount: expect.any(Number), currency: "IDR" },
     });
+    expect(body.requestSummary).toMatchObject({
+      origin: validOrigin,
+      destination: validDestination,
+    });
+    expect(body.debug).toBeUndefined();
   });
 
   it("accepts countryCode with postalCode", async () => {
@@ -164,6 +250,11 @@ describe("quotes API", () => {
     });
 
     expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.requestSummary).toMatchObject({
+      origin: { method: "location", countryCode: "ID", postalCode: "11460" },
+      destination: { method: "location", countryCode: "ID", postalCode: "40111" },
+    });
   });
 
   it("rejects countryCode-only location input", async () => {

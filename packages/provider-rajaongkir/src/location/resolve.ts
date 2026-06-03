@@ -14,7 +14,7 @@ import {
 
 export const RAJAONGKIR_PROVIDER_KEY = "rajaongkir";
 
-const DISTRICT_LEVEL = 3 as const;
+const LEAF_LEVEL = 4 as const;
 const LEVEL_KEYS = ["level1", "level2", "level3", "level4"] as const;
 
 function indexRecords(
@@ -82,27 +82,27 @@ function hasHierarchyHints(input: LocationMethodInput): boolean {
   return LEVEL_KEYS.some((key) => Boolean(input[key]));
 }
 
-function pickDistrictCandidate(
+function pickLeafCandidate(
   candidates: ScoredLocationRecord[],
 ): ProviderLocationRecord {
-  const districts = candidates.filter(
-    (candidate) => candidate.record.level === DISTRICT_LEVEL,
+  const leaves = candidates.filter(
+    (candidate) => candidate.record.level === LEAF_LEVEL,
   );
 
-  if (districts.length === 0) {
+  if (leaves.length === 0) {
     throw new LocationError(
       "LOCATION_NOT_FOUND",
-      "Input did not resolve to a unique RajaOngkir district",
+      "Input did not resolve to a unique RajaOngkir subdistrict",
       { providerKey: RAJAONGKIR_PROVIDER_KEY },
     );
   }
 
-  const best = pickBestScoredCandidates(districts);
+  const best = pickBestScoredCandidates(leaves);
 
   if (best.length > 1) {
     throw new LocationError(
       "LOCATION_AMBIGUOUS",
-      `Multiple RajaOngkir districts tied at score ${best[0]!.score}`,
+      `Multiple RajaOngkir subdistricts tied at score ${best[0]!.score}`,
       { providerKey: RAJAONGKIR_PROVIDER_KEY },
     );
   }
@@ -110,7 +110,7 @@ function pickDistrictCandidate(
   return best[0]!.record;
 }
 
-function resolveDistrictFromPostal(
+function resolveLeafFromPostal(
   input: LocationMethodInput,
   records: ProviderLocationRecord[],
 ): ProviderLocationRecord | null {
@@ -119,18 +119,18 @@ function resolveDistrictFromPostal(
   }
 
   const normalizedPostal = normalizePostalCode(input.postalCode);
-  const postalDistricts = records.filter(
+  const postalLeaves = records.filter(
     (record) =>
-      record.level === DISTRICT_LEVEL &&
+      record.level === LEAF_LEVEL &&
       record.postalCodes.includes(normalizedPostal),
   );
 
-  if (postalDistricts.length === 0) {
+  if (postalLeaves.length === 0) {
     return null;
   }
 
-  const hierarchyMatches = postalDistricts.filter((district) =>
-    inputMatchesDistrictPath(input, district, records),
+  const hierarchyMatches = postalLeaves.filter((leaf) =>
+    inputMatchesDistrictPath(input, leaf, records),
   );
 
   if (hierarchyMatches.length === 1) {
@@ -140,7 +140,7 @@ function resolveDistrictFromPostal(
   if (hierarchyMatches.length > 1) {
     throw new LocationError(
       "LOCATION_AMBIGUOUS",
-      `Postal code ${input.postalCode} matches multiple RajaOngkir districts`,
+      `Postal code ${input.postalCode} matches multiple RajaOngkir subdistricts`,
       { providerKey: RAJAONGKIR_PROVIDER_KEY },
     );
   }
@@ -153,25 +153,33 @@ function resolveDistrictFromPostal(
     );
   }
 
-  if (postalDistricts.length === 1) {
-    return postalDistricts[0]!;
+  if (postalLeaves.length === 1) {
+    return postalLeaves[0]!;
   }
 
   const scored = scoreLocationCandidates(input, records).filter((candidate) =>
-    postalDistricts.some(
-      (district) => district.providerId === candidate.record.providerId,
+    postalLeaves.some(
+      (leaf) => leaf.providerId === candidate.record.providerId,
     ),
   );
 
   if (scored.length === 0) {
     throw new LocationError(
       "LOCATION_AMBIGUOUS",
-      `Postal code ${input.postalCode} matches multiple RajaOngkir districts`,
+      `Postal code ${input.postalCode} matches multiple RajaOngkir subdistricts`,
       { providerKey: RAJAONGKIR_PROVIDER_KEY },
     );
   }
 
-  return pickDistrictCandidate(scored);
+  return pickLeafCandidate(scored);
+}
+
+/**
+ * Strip the internal provider-id prefix so the raw RajaOngkir numeric id
+ * can be sent to upstream API endpoints.
+ */
+export function extractRajaOngkirApiId(providerId: string): string {
+  return providerId.replace(/^[pcds]/, "");
 }
 
 export function resolveDistrict(
@@ -179,7 +187,7 @@ export function resolveDistrict(
   records: ProviderLocationRecord[],
 ): ProviderLocationRecord {
   try {
-    const postalMatch = resolveDistrictFromPostal(input, records);
+    const postalMatch = resolveLeafFromPostal(input, records);
     if (postalMatch) {
       return postalMatch;
     }
@@ -188,10 +196,10 @@ export function resolveDistrict(
       providerKey: RAJAONGKIR_PROVIDER_KEY,
     });
 
-    if (resolution.record.level !== DISTRICT_LEVEL) {
+    if (resolution.record.level !== LEAF_LEVEL) {
       throw new LocationError(
         "LOCATION_NOT_FOUND",
-        "Input did not resolve to a unique RajaOngkir district",
+        "Input did not resolve to a unique RajaOngkir subdistrict",
         { providerKey: RAJAONGKIR_PROVIDER_KEY },
       );
     }
@@ -199,7 +207,7 @@ export function resolveDistrict(
     if (resolution.score < MIN_RESOLUTION_SCORE) {
       throw new LocationError(
         "LOCATION_NOT_FOUND",
-        "District resolution score was below acceptable confidence",
+        "Subdistrict resolution score was below acceptable confidence",
         { providerKey: RAJAONGKIR_PROVIDER_KEY },
       );
     }

@@ -8,6 +8,7 @@ export interface RajaOngkirProviderConfig {
   baseUrl?: string;
   couriers: string[];
   records: ProviderLocationRecord[];
+  debug?: boolean;
 }
 
 export function validateRajaOngkirProviderConfig(

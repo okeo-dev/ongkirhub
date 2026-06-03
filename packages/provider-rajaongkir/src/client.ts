@@ -24,11 +24,12 @@ export interface RajaOngkirClientConfig {
   apiKey: string;
   baseUrl: string;
   fetchFn?: FetchFn;
+  debug?: boolean;
 }
 
-export interface CalculateDistrictCostParams {
-  originDistrictId: string;
-  destinationDistrictId: string;
+export interface CalculateDomesticCostParams {
+  originId: string;
+  destinationId: string;
   weightGrams: number;
   couriers: string[];
   priceSort?: "lowest" | "highest";
@@ -38,26 +39,39 @@ export class RajaOngkirClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly fetchFn: FetchFn;
+  private readonly debug: boolean;
 
   constructor(config: RajaOngkirClientConfig) {
     this.apiKey = config.apiKey;
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
     this.fetchFn = config.fetchFn ?? fetch;
+    this.debug = config.debug ?? false;
   }
 
-  async calculateDistrictDomesticCost(
-    params: CalculateDistrictCostParams,
+  async calculateDomesticCost(
+    params: CalculateDomesticCostParams,
   ): Promise<RajaOngkirCostItem[]> {
     const body = new URLSearchParams({
-      origin: params.originDistrictId,
-      destination: params.destinationDistrictId,
+      origin: params.originId,
+      destination: params.destinationId,
       weight: String(params.weightGrams),
       courier: params.couriers.join(":"),
       price: params.priceSort ?? "lowest",
     });
 
+    if (this.debug) {
+      console.log("[rajaongkir] request", {
+        url: `${this.baseUrl}/calculate/domestic-cost`,
+        origin: params.originId,
+        destination: params.destinationId,
+        weight: params.weightGrams,
+        couriers: params.couriers,
+        priceSort: params.priceSort ?? "lowest",
+      });
+    }
+
     const response = await this.fetchFn(
-      `${this.baseUrl}/calculate/district/domestic-cost`,
+      `${this.baseUrl}/calculate/domestic-cost`,
       {
         method: "POST",
         headers: {
@@ -69,6 +83,17 @@ export class RajaOngkirClient {
     );
 
     const payload = (await response.json()) as RajaOngkirCostResponse;
+
+    if (this.debug) {
+      console.dir(
+        {
+          status: response.status,
+          ok: response.ok,
+          payload,
+        },
+        { depth: null },
+      );
+    }
 
     if (!response.ok) {
       throw mapHttpFailure(response.status, payload);

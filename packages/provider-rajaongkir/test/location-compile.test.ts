@@ -13,27 +13,57 @@ const sourcePath = join(
 );
 
 describe("location compile", () => {
-  it("compiles YAML into runtime records with normalized aliases", () => {
+  it("compiles real YAML into runtime records", () => {
     const yamlSource = readFileSync(sourcePath, "utf8");
     const records = compileYamlSourceToRecords(yamlSource);
-
     expect(records.length).toBeGreaterThan(0);
+  });
 
-    const jakarta = records.find((record) => record.providerId === "p6");
-    expect(jakarta?.level).toBe(1);
-    expect(jakarta?.normalizedAliases).toEqual([
-      "DAERAH KHUSUS IBUKOTA JAKARTA",
-    ]);
+  it("compiles level4 hierarchy with normalized aliases and postal codes", () => {
+    const records = compileYamlSourceToRecords(`
+provider: rajaongkir
+version: "1"
+countries:
+  - countryCode: ID
+    nodes:
+      - providerId: "p1"
+        name: PROV
+        aliases:
+          - ALIAS PROV
+        children:
+          - providerId: "c1"
+            name: KOTA CITY
+            aliases:
+              - CITY
+            children:
+              - providerId: "d1"
+                name: DISTRICT
+                children:
+                  - providerId: "100"
+                    name: SUBDISTRICT
+                    postalCodes:
+                      - "12345"
+`);
 
-    const bandung = records.find((record) => record.providerId === "c23");
-    expect(bandung?.level).toBe(2);
-    expect(bandung?.name).toBe("KOTA BANDUNG");
-    expect(bandung?.normalizedAliases).toEqual(["BANDUNG"]);
+    expect(records.length).toBe(4);
 
-    const antapani = records.find((record) => record.providerId === "339");
-    expect(antapani?.level).toBe(3);
-    expect(antapani?.name).toBe("ANTAPANI");
-    expect(antapani?.normalizedAliases).toEqual(["CICADAS"]);
+    const prov = records.find((r) => r.providerId === "p1");
+    expect(prov?.level).toBe(1);
+    expect(prov?.normalizedAliases).toEqual(["ALIAS PROV"]);
+
+    const city = records.find((r) => r.providerId === "c1");
+    expect(city?.level).toBe(2);
+    expect(city?.name).toBe("KOTA CITY");
+    expect(city?.normalizedAliases).toEqual(["CITY"]);
+
+    const district = records.find((r) => r.providerId === "d1");
+    expect(district?.level).toBe(3);
+    expect(district?.name).toBe("DISTRICT");
+
+    const sub = records.find((r) => r.providerId === "100");
+    expect(sub?.level).toBe(4);
+    expect(sub?.name).toBe("SUBDISTRICT");
+    expect(sub?.postalCodes).toEqual(["12345"]);
   });
 
   it("fails on duplicate providerId", () => {

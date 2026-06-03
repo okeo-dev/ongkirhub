@@ -32,7 +32,7 @@ export function mapRajaOngkirCostsToQuotes(items: RajaOngkirCostItem[]): Quote[]
   return items.map((item) => ({
     providerKey: RAJAONGKIR_PROVIDER_KEY,
     serviceCode: `${item.code}-${item.service}`.toUpperCase(),
-    serviceName: item.description || `${item.name} ${item.service}`,
+    serviceName: `${item.name} ${item.service}`,
     price: {
       amount: item.cost,
       currency: "IDR",
@@ -43,6 +43,7 @@ export function mapRajaOngkirCostsToQuotes(items: RajaOngkirCostItem[]): Quote[]
       courierCode: item.code,
       courierName: item.name,
       service: item.service,
+      description: item.description,
       rawEtd: item.etd,
     },
   }));

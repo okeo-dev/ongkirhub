@@ -5,18 +5,47 @@ import {
   type ProviderLocationRecord,
 } from "@ongkirhub/core";
 import { compileYamlSourceToRecords } from "../src/location/compile.js";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { createRajaOngkirProvider } from "../src/provider.js";
 import { validateRajaOngkirProviderConfig } from "../src/config.js";
 import { mapRajaOngkirCostsToQuotes, parseEstimatedDuration } from "../src/quotes.js";
 
-const records: ProviderLocationRecord[] = compileYamlSourceToRecords(
-  readFileSync(
-    join(import.meta.dirname, "../src/location/source/locations.yaml"),
-    "utf8",
-  ),
-);
+const syntheticYaml = `
+provider: rajaongkir
+version: "1"
+countries:
+  - countryCode: ID
+    nodes:
+      - providerId: "p6"
+        name: DKI JAKARTA
+        children:
+          - providerId: "c1"
+            name: KOTA JAKARTA BARAT
+            aliases:
+              - JAKARTA BARAT
+            children:
+              - providerId: "d1"
+                name: GROGOL PETAMBURAN
+                children:
+                  - providerId: "2088"
+                    name: GROGOL
+                  - providerId: "2089"
+                    name: JELAMBAR
+      - providerId: "p9"
+        name: JAWA BARAT
+        children:
+          - providerId: "c23"
+            name: KOTA BANDUNG
+            aliases:
+              - BANDUNG
+            children:
+              - providerId: "d2"
+                name: COBLONG
+                children:
+                  - providerId: "356"
+                    name: CICADAS
+`;
+
+const records: ProviderLocationRecord[] = compileYamlSourceToRecords(syntheticYaml);
 
 const baseConfig = {
   apiKey: "test-api-key",
@@ -89,13 +118,14 @@ describe("createRajaOngkirProvider", () => {
     expect(quotes[0]).toMatchObject({
       providerKey: "rajaongkir",
       serviceCode: "JNE-REG",
+      serviceName: "JNE REG",
       price: { amount: 15000, currency: "IDR" },
       estimatedDuration: { value: 2, unit: "days" },
-      metadata: { courierCode: "jne", rawEtd: "2-3 day" },
+      metadata: { courierCode: "jne", description: "JNE Regular", rawEtd: "2-3 day" },
     });
   });
 
-  it("resolves districts and calls RajaOngkir with mocked HTTP", async () => {
+  it("resolves subdistricts and calls RajaOngkir with mocked HTTP", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -123,6 +153,7 @@ describe("createRajaOngkirProvider", () => {
         level1: "DKI Jakarta",
         level2: "Kota Jakarta Barat",
         level3: "Grogol Petamburan",
+        level4: "Grogol",
       },
       destination: {
         method: "location",
@@ -130,6 +161,7 @@ describe("createRajaOngkirProvider", () => {
         level1: "Jawa Barat",
         level2: "Kota Bandung",
         level3: "Coblong",
+        level4: "Cicadas",
       },
       parcels: [{ weightGrams: 1000 }],
       totalWeightGrams: 1000,
@@ -138,7 +170,8 @@ describe("createRajaOngkirProvider", () => {
     expect(quotes).toHaveLength(1);
     expect(quotes[0]?.price.amount).toBe(12000);
 
-    const [, requestInit] = fetchMock.mock.calls[0]!;
+    const [url, requestInit] = fetchMock.mock.calls[0]!;
+    expect(url).toMatch(/\/calculate\/domestic-cost$/);
     const body = new URLSearchParams(requestInit?.body as string);
     expect(body.get("origin")).toBe("2088");
     expect(body.get("destination")).toBe("356");
@@ -168,6 +201,7 @@ describe("createRajaOngkirProvider", () => {
           level1: "DKI Jakarta",
           level2: "Kota Jakarta Barat",
           level3: "Grogol Petamburan",
+          level4: "Grogol",
         },
         destination: {
           method: "location",
@@ -175,6 +209,7 @@ describe("createRajaOngkirProvider", () => {
           level1: "Jawa Barat",
           level2: "Kota Bandung",
           level3: "Coblong",
+          level4: "Cicadas",
         },
         parcels: [{ weightGrams: 500 }],
         totalWeightGrams: 500,
@@ -211,8 +246,9 @@ describe("createRajaOngkirProvider", () => {
           method: "location",
           countryCode: "ID",
           level1: "DKI Jakarta",
-          level2: "Jakarta Pusat",
-          level3: "Menteng",
+          level2: "Kota Jakarta Barat",
+          level3: "Grogol Petamburan",
+          level4: "Grogol",
         },
         destination: {
           method: "location",
@@ -220,10 +256,60 @@ describe("createRajaOngkirProvider", () => {
           level1: "Jawa Barat",
           level2: "Kota Bandung",
           level3: "Coblong",
+          level4: "Cicadas",
         },
         parcels: [{ weightGrams: 1000 }],
         totalWeightGrams: 1000,
       },
+    });
+  });
+
+  it("does not expose getDebugInfo when debug is disabled", () => {
+    const provider = createRajaOngkirProvider(baseConfig);
+    expect((provider as Record<string, unknown>).getDebugInfo).toBeUndefined();
+  });
+
+  it("exposes resolved IDs via getDebugInfo when debug is enabled", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          meta: { status: "success", code: 200 },
+          data: [],
+        }),
+      }),
+    );
+
+    const provider = createRajaOngkirProvider({ ...baseConfig, debug: true });
+    await provider.getQuotes({
+      origin: {
+        method: "location",
+        countryCode: "ID",
+        level1: "DKI Jakarta",
+        level2: "Kota Jakarta Barat",
+        level3: "Grogol Petamburan",
+        level4: "Grogol",
+      },
+      destination: {
+        method: "location",
+        countryCode: "ID",
+        level1: "Jawa Barat",
+        level2: "Kota Bandung",
+        level3: "Coblong",
+        level4: "Cicadas",
+      },
+      parcels: [{ weightGrams: 1000 }],
+      totalWeightGrams: 1000,
+    });
+
+    const debugInfo = (provider as Record<string, () => object>).getDebugInfo!();
+    expect(debugInfo).toMatchObject({
+      originId: "2088",
+      destinationId: "356",
+      weightGrams: 1000,
+      couriers: ["jne", "tiki"],
     });
   });
 });

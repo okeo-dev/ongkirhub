@@ -2,6 +2,7 @@ export interface RajaOngkirEnvConfig {
   apiKey: string;
   couriers: string[];
   baseUrl?: string;
+  debug?: boolean;
 }
 
 export interface ApiEnv {
@@ -37,6 +38,7 @@ function loadRajaOngkirConfig(
   const apiKey = env.RAJAONGKIR_API_KEY?.trim();
   const couriers = parseCourierList(env.RAJAONGKIR_COURIERS);
   const baseUrl = env.RAJAONGKIR_BASE_URL?.trim();
+  const debug = env.RAJAONGKIR_DEBUG === "1" || env.RAJAONGKIR_DEBUG === "true";
 
   if (!apiKey && couriers.length === 0 && !baseUrl) {
     return undefined;
@@ -45,6 +47,7 @@ function loadRajaOngkirConfig(
   return {
     apiKey: apiKey ?? "",
     couriers,
+    debug,
     ...(baseUrl ? { baseUrl } : {}),
   };
 }
@@ -67,9 +70,11 @@ function requireRajaOngkirConfig(
   }
 
   const baseUrl = env.RAJAONGKIR_BASE_URL?.trim();
+  const debug = env.RAJAONGKIR_DEBUG === "1" || env.RAJAONGKIR_DEBUG === "true";
   return {
     apiKey,
     couriers,
+    debug,
     ...(baseUrl ? { baseUrl } : {}),
   };
 }
