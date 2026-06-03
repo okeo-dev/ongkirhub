@@ -1,6 +1,9 @@
 export {
   DEFAULT_BITESHIP_BASE_URL,
+  type BiteshipEnvConfig,
   type BiteshipProviderConfig,
+  loadBiteshipConfigFromEnv,
+  requireBiteshipConfigFromEnv,
   validateBiteshipProviderConfig,
 } from "./config.js";
 export {

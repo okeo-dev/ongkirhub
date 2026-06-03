@@ -4,7 +4,11 @@ import {
   assertProviderConformance,
 } from "@ongkirhub/core";
 import { createBiteshipProvider } from "../src/provider.js";
-import { validateBiteshipProviderConfig } from "../src/config.js";
+import {
+  loadBiteshipConfigFromEnv,
+  requireBiteshipConfigFromEnv,
+  validateBiteshipProviderConfig,
+} from "../src/config.js";
 import { mapBiteshipPricingToQuotes, parseEstimatedDuration } from "../src/quotes.js";
 
 const baseConfig = {
@@ -27,6 +31,54 @@ describe("validateBiteshipProviderConfig", () => {
         couriers: [],
       }),
     ).toThrow(/at least one courier/);
+  });
+});
+
+describe("loadBiteshipConfigFromEnv", () => {
+  it("returns undefined when no Biteship env vars are present", () => {
+    const config = loadBiteshipConfigFromEnv({});
+    expect(config).toBeUndefined();
+  });
+
+  it("parses all env vars correctly", () => {
+    const config = loadBiteshipConfigFromEnv({
+      BITESHIP_API_KEY: "test-key",
+      BITESHIP_COURIERS: "jne, sicepat",
+      BITESHIP_BASE_URL: "https://example.com",
+      BITESHIP_DEBUG: "true",
+    });
+    expect(config).toEqual({
+      apiKey: "test-key",
+      couriers: ["jne", "sicepat"],
+      baseUrl: "https://example.com",
+      debug: true,
+    });
+  });
+});
+
+describe("requireBiteshipConfigFromEnv", () => {
+  it("throws when BITESHIP_API_KEY is missing", () => {
+    expect(() =>
+      requireBiteshipConfigFromEnv({ BITESHIP_COURIERS: "jne" }),
+    ).toThrow(/BITESHIP_API_KEY is required/);
+  });
+
+  it("throws when BITESHIP_COURIERS is missing", () => {
+    expect(() =>
+      requireBiteshipConfigFromEnv({ BITESHIP_API_KEY: "key" }),
+    ).toThrow(/BITESHIP_COURIERS is required/);
+  });
+
+  it("returns config when required fields are present", () => {
+    const config = requireBiteshipConfigFromEnv({
+      BITESHIP_API_KEY: "test-key",
+      BITESHIP_COURIERS: "jne,sicepat",
+    });
+    expect(config).toEqual({
+      apiKey: "test-key",
+      couriers: ["jne", "sicepat"],
+      debug: false,
+    });
   });
 });
 

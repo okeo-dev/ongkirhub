@@ -6,7 +6,11 @@ import {
 } from "@ongkirhub/core";
 import { compileYamlSourceToRecords } from "../src/location/compile.js";
 import { createRajaOngkirProvider } from "../src/provider.js";
-import { validateRajaOngkirProviderConfig } from "../src/config.js";
+import {
+  loadRajaOngkirConfigFromEnv,
+  requireRajaOngkirConfigFromEnv,
+  validateRajaOngkirProviderConfig,
+} from "../src/config.js";
 import {
   mapRajaOngkirCostsToQuotes,
   mapRajaOngkirInternationalCostsToQuotes,
@@ -85,6 +89,70 @@ describe("validateRajaOngkirProviderConfig", () => {
   });
 });
 
+describe("loadRajaOngkirConfigFromEnv", () => {
+  it("returns undefined when no RajaOngkir env vars are present", () => {
+    const config = loadRajaOngkirConfigFromEnv({});
+    expect(config).toBeUndefined();
+  });
+
+  it("loads optional config when some env vars are present", () => {
+    const config = loadRajaOngkirConfigFromEnv({
+      RAJAONGKIR_UNSAFE_ALLOW_AMBIGUOUS_BEST_MATCH: "1",
+    });
+    expect(config).toEqual({
+      apiKey: "",
+      couriers: [],
+      debug: false,
+      unsafeAllowAmbiguousBestMatch: true,
+    });
+  });
+
+  it("parses all env vars correctly", () => {
+    const config = loadRajaOngkirConfigFromEnv({
+      RAJAONGKIR_API_KEY: "test-key",
+      RAJAONGKIR_COURIERS: "jne, tiki",
+      RAJAONGKIR_INTERNATIONAL_COURIERS: "ray , lion",
+      RAJAONGKIR_BASE_URL: "https://example.com",
+      RAJAONGKIR_DEBUG: "1",
+      RAJAONGKIR_UNSAFE_ALLOW_AMBIGUOUS_BEST_MATCH: "1",
+    });
+    expect(config).toEqual({
+      apiKey: "test-key",
+      couriers: ["jne", "tiki"],
+      internationalCouriers: ["ray", "lion"],
+      baseUrl: "https://example.com",
+      debug: true,
+      unsafeAllowAmbiguousBestMatch: true,
+    });
+  });
+});
+
+describe("requireRajaOngkirConfigFromEnv", () => {
+  it("throws when RAJAONGKIR_API_KEY is missing", () => {
+    expect(() =>
+      requireRajaOngkirConfigFromEnv({ RAJAONGKIR_COURIERS: "jne" }),
+    ).toThrow(/RAJAONGKIR_API_KEY is required/);
+  });
+
+  it("throws when RAJAONGKIR_COURIERS is missing", () => {
+    expect(() =>
+      requireRajaOngkirConfigFromEnv({ RAJAONGKIR_API_KEY: "key" }),
+    ).toThrow(/RAJAONGKIR_COURIERS is required/);
+  });
+
+  it("returns config when required fields are present", () => {
+    const config = requireRajaOngkirConfigFromEnv({
+      RAJAONGKIR_API_KEY: "test-key",
+      RAJAONGKIR_COURIERS: "jne,pos",
+    });
+    expect(config).toEqual({
+      apiKey: "test-key",
+      couriers: ["jne", "pos"],
+      debug: false,
+    });
+  });
+});
+
 describe("parseEstimatedDuration", () => {
   it("parses day and hour ranges conservatively", () => {
     expect(parseEstimatedDuration("1-2 day")).toEqual({
@@ -129,7 +197,7 @@ describe("createRajaOngkirProvider", () => {
     });
   });
 
-  it("resolves subdistricts and calls RajaOngkir with mocked HTTP", async () => {
+  it("resolves locations and calls RajaOngkir domestic with mocked HTTP", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,

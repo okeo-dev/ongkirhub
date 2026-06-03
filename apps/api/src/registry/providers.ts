@@ -52,6 +52,7 @@ export function createProviderRegistry(env: ApiEnv): Map<string, ShippingProvide
           baseUrl: rajaongkir!.baseUrl,
           records: RAJAONGKIR_LOCATION_RECORDS,
           debug: rajaongkir!.debug,
+          unsafeAllowAmbiguousBestMatch: rajaongkir!.unsafeAllowAmbiguousBestMatch,
         }),
       );
       continue;

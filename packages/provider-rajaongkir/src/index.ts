@@ -1,6 +1,9 @@
 export {
   DEFAULT_RAJAONGKIR_BASE_URL,
+  type RajaOngkirEnvConfig,
   type RajaOngkirProviderConfig,
+  loadRajaOngkirConfigFromEnv,
+  requireRajaOngkirConfigFromEnv,
   validateRajaOngkirProviderConfig,
 } from "./config.js";
 export {

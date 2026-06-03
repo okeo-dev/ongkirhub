@@ -216,4 +216,95 @@ countries:
       ),
     ).toThrow(expect.objectContaining({ code: "LOCATION_AMBIGUOUS" }));
   });
+
+  it("with unsafeAllowAmbiguousBestMatch enabled, returns first match instead of throwing", () => {
+    const records = compileYamlSourceToRecords(`
+provider: rajaongkir
+version: "1"
+countries:
+  - countryCode: ID
+    nodes:
+      - providerId: "p1"
+        name: PROV
+        children:
+          - providerId: "c1"
+            name: CITY
+            children:
+              - providerId: "d1"
+                name: DISTRICT A
+                children:
+                  - providerId: "10"
+                    name: SUB A
+                    postalCodes: ["99999"]
+                  - providerId: "11"
+                    name: SUB B
+                    postalCodes: ["99999"]
+`);
+
+    const result = resolveDistrict(
+      {
+        method: "location",
+        countryCode: "ID",
+        postalCode: "99999",
+        level1: "PROV",
+        level2: "CITY",
+      },
+      records,
+      true,
+    );
+    expect(result.providerId).toBe("10");
+  });
+
+  it("accepts confident level 3 district match for domestic", () => {
+    const records = compileYamlSourceToRecords(`
+provider: rajaongkir
+version: "1"
+countries:
+  - countryCode: ID
+    nodes:
+      - providerId: "p1"
+        name: JAWA TIMUR
+        children:
+          - providerId: "c1"
+            name: SURABAYA
+            children:
+              - providerId: "d1"
+                name: GUBENG
+                children:
+                  - providerId: "100"
+                    name: GUBENG
+`);
+
+    // Input provides level1–level3 only. The district (level 3) is the best match.
+    // Domestic resolution should accept it directly instead of rejecting or falling back.
+    const result = resolveDistrict(
+      {
+        method: "location",
+        countryCode: "ID",
+        level1: "Jawa Timur",
+        level2: "Surabaya",
+        level3: "Gubeng",
+      },
+      records,
+    );
+    expect(result.providerId).toBe("d1");
+    expect(result.level).toBe(3);
+  });
+
+  it("with flag enabled but no ambiguity, still resolves normally", () => {
+    const records = makeRecords();
+    const subdistrict = resolveDistrict(
+      {
+        method: "location",
+        countryCode: "ID",
+        level1: "DKI Jakarta",
+        level2: "Kota Jakarta Barat",
+        level3: "Grogol Petamburan",
+        level4: "Grogol",
+      },
+      records,
+      true,
+    );
+    expect(subdistrict.providerId).toBe("100");
+  });
 });

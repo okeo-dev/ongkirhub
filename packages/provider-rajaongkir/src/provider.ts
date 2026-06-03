@@ -68,10 +68,17 @@ export function createRajaOngkirProvider(
   };
 
   async function handleDomestic(request: QuoteRequest): Promise<Quote[]> {
-    const origin = resolveDistrict(request.origin, validated.records);
+    const origin = resolveDistrict(
+      request.origin,
+      validated.records,
+      validated.unsafeAllowAmbiguousBestMatch,
+      validated.debug,
+    );
     const destination = resolveDistrict(
       request.destination,
       validated.records,
+      validated.unsafeAllowAmbiguousBestMatch,
+      validated.debug,
     );
 
     const originId = extractRajaOngkirApiId(origin.providerId);
@@ -98,7 +105,12 @@ export function createRajaOngkirProvider(
   }
 
   async function handleInternational(request: QuoteRequest): Promise<Quote[]> {
-    const origin = resolveDistrict(request.origin, validated.records);
+    const origin = resolveDistrict(
+      request.origin,
+      validated.records,
+      validated.unsafeAllowAmbiguousBestMatch,
+      validated.debug,
+    );
     const originId = extractRajaOngkirApiId(origin.providerId);
 
     const countryRecord = resolveCountryId(request.destination.countryCode);
