@@ -1,25 +1,68 @@
 # OngkirHub
 
-OngkirHub is an open-source shipping integration framework for logistics integrations across providers and countries. Integrate once against a stable provider contract, then plug in courier adapters without rewriting your application.
+Use one quote API contract even when shipping providers use different location IDs, payloads, and response formats.
+
+OngkirHub is an open-source shipping integration framework for teams that want to integrate multiple logistics providers without rewriting their application for each one. It provides a shared provider contract, an HTTP API, a TypeScript client, and React hooks on top of real provider integrations.
+
+```text
+Your application
+  ↓
+@ongkirhub/client or @ongkirhub/react
+  ↓
+@ongkirhub/api
+  ↓
+Providers
+  ├── RajaOngkir
+  ├── Biteship
+  ├── Mock
+  └── Manual
+```
+
+## Current status
+
+OngkirHub is currently **alpha**:
+
+- real providers are already implemented
+- architecture has been validated against live provider APIs
+- suitable for technical teams and guided adopters
+- not yet positioned as a turnkey merchant/no-code product
 
 ## v0.1 scope
 
 Included:
 
-- Normalized **rates and ETA** quotes
+- normalized **rates and ETA** quotes
 - `@ongkirhub/core` provider contract
 - `@ongkirhub/api` HTTP server (`GET /health`, `POST /v0/quotes`)
-- Reference providers: `mock` (deterministic), `manual` (configurable static rates), and optional real providers `rajaongkir` (RajaOngkir domestic and international rates) and `biteship` (Biteship courier aggregator)
+- `@ongkirhub/client` TypeScript SDK
+- `@ongkirhub/react` headless React integration
+- implemented providers:
+  - `mock`
+  - `manual`
+  - `rajaongkir`
+  - `biteship`
 
 Not included yet:
 
-- Tracking, booking, labels
-- Persistence, caching, queues
-- Multi-tenant auth
+- tracking, booking, labels
+- persistence, caching, queues
+- multi-tenant auth
+- merchant-ready embeddable widget
 
-## Quick start
+## Provider matrix
+
+| Provider | Status | Domestic | International | Location strategy |
+| --- | --- | --- | --- | --- |
+| Mock | Implemented | Yes | Yes | Synthetic |
+| Manual | Implemented | Yes | Yes | Static config |
+| RajaOngkir | Implemented | Yes | Yes | Hierarchy / provider mapping |
+| Biteship | Implemented | Yes | No | Postal code |
+
+## Fastest first quote
 
 Requirements: Node.js 20+, pnpm 9.
+
+Install and run:
 
 ```bash
 pnpm install
@@ -28,7 +71,7 @@ pnpm dev
 
 The API listens on `http://0.0.0.0:3000` by default.
 
-### Example quote request
+Then send a first successful quote request using the built-in `mock` and `manual` providers:
 
 ```bash
 curl -s http://localhost:3000/v0/quotes \
@@ -52,33 +95,42 @@ curl -s http://localhost:3000/v0/quotes \
   }' | jq
 ```
 
-### Docker (optional smoke test)
+Example response:
 
-```bash
-docker build -t ongkirhub .
-docker run --rm -p 3000:3000 ongkirhub
+```json
+{
+  "quotes": [
+    {
+      "providerKey": "mock",
+      "serviceCode": "MOCK_REG",
+      "serviceName": "Mock Regular",
+      "price": {
+        "amount": 18000,
+        "currency": "IDR"
+      },
+      "estimatedDuration": {
+        "value": 2,
+        "unit": "days"
+      }
+    }
+  ],
+  "providers": ["mock", "manual"]
+}
 ```
 
-## Packages
+If you want a real provider next, enable RajaOngkir or Biteship below.
 
-| Package | Purpose |
-| --- | --- |
-| `@ongkirhub/core` | Domain types, provider contract, validation, errors |
-| `@ongkirhub/client` | Framework-agnostic TypeScript client for the OngkirHub API |
-| `@ongkirhub/react` | Headless React hooks and provider for the OngkirHub client |
-| `@ongkirhub/api` | Publishable HTTP API and provider registry composition |
-| `@ongkirhub/provider-mock` | Deterministic development provider |
-| `@ongkirhub/provider-manual` | Configurable static-rate provider |
-| `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic and international rates (optional, API-composed) |
-| `@ongkirhub/provider-biteship` | Biteship courier aggregator rates (optional, API-composed) |
+## Common adoption paths
 
-Dependency rule: **providers depend on `core` only**, never on `api`. Frontend packages (`client`, `react`) depend on `core` + `client`.
+- **Backend/API consumer**: run `@ongkirhub/api`, enable one or more providers, and call `/v0/quotes`.
+- **TypeScript or frontend app developer**: start with `@ongkirhub/client`, then use `@ongkirhub/react` for React apps.
+- **Provider author**: start from the provider contract in `@ongkirhub/core` and use the provider authoring docs plus `mock` or `manual` as references.
 
-### Enable real providers (optional)
+## Real provider setup
 
-#### RajaOngkir
+### RajaOngkir
 
-Add `rajaongkir` to `ENABLED_PROVIDERS` and set RajaOngkir credentials. The location dataset ships compiled inside `@ongkirhub/provider-rajaongkir` (no YAML parsing at API startup).
+Add `rajaongkir` to `ENABLED_PROVIDERS` and set RajaOngkir credentials. The location dataset ships compiled inside `@ongkirhub/provider-rajaongkir` so there is no YAML parsing at API startup.
 
 ```bash
 export ENABLED_PROVIDERS=mock,rajaongkir
@@ -90,21 +142,21 @@ export RAJAONGKIR_COURIERS=jne,pos
 pnpm dev
 ```
 
-**Courier lists:**
+**Courier lists**
 
 - `RAJAONGKIR_COURIERS` is the default courier list used for all routes.
-- `RAJAONGKIR_INTERNATIONAL_COURIERS` is an optional override used only for international routes (`ID` origin → non-`ID` destination).
+- `RAJAONGKIR_INTERNATIONAL_COURIERS` is an optional override used only for international routes (`ID` origin -> non-`ID` destination).
 - If `RAJAONGKIR_INTERNATIONAL_COURIERS` is not set, international routes fall back to `RAJAONGKIR_COURIERS`.
 
-**Route behavior:**
+**Route behavior**
 
-| Route | Origin | Destination | Path |
-|-------|--------|-------------|------|
+| Route | Origin | Destination | Upstream path |
+| --- | --- | --- | --- |
 | Domestic | `ID` | `ID` | `POST /calculate/domestic-cost` |
 | International | `ID` | non-`ID` | `POST /calculate/international-cost` |
 | Unsupported | non-`ID` | any | Rejected with `UNSUPPORTED_ROUTE` |
 
-**International destination input:**
+**International destination input**
 
 For international quotes, the destination only needs `countryCode`:
 
@@ -119,20 +171,19 @@ For international quotes, the destination only needs `countryCode`:
 
 The provider resolves the country code to the RajaOngkir country ID internally. No postal code or city hierarchy is required for international destinations.
 
-If `rajaongkir` is not listed in `ENABLED_PROVIDERS`, RajaOngkir env vars are not required.
+**Ambiguous location escape hatch**
 
-**Ambiguous location escape hatch:**
-
-By default, RajaOngkir rejects requests when a postal code or hierarchy match is ambiguous (multiple subdistricts tie). Set `RAJAONGKIR_UNSAFE_ALLOW_AMBIGUOUS_BEST_MATCH=1` to fall back to the first candidate with a console warning instead of throwing `LOCATION_AMBIGUOUS`:
+By default, RajaOngkir rejects requests when a postal code or hierarchy match is ambiguous. Set `RAJAONGKIR_UNSAFE_ALLOW_AMBIGUOUS_BEST_MATCH=1` only if you explicitly accept the risk of incorrect origin/destination resolution:
 
 ```bash
 export RAJAONGKIR_UNSAFE_ALLOW_AMBIGUOUS_BEST_MATCH=1
 ```
 
-- Disabled by default. Use only when you accept the risk of incorrect origin/destination resolution.
-- This flag is provider-local and does not affect other providers.
+- disabled by default
+- provider-local to RajaOngkir
+- not recommended for production checkout flows
 
-#### Biteship
+### Biteship
 
 Add `biteship` to `ENABLED_PROVIDERS` and set Biteship credentials:
 
@@ -147,7 +198,16 @@ pnpm dev
 
 Biteship v0.1 uses **postal code lookup** for origin and destination. The request must include `postalCode` on both `origin` and `destination`. Non-Indonesia routes are rejected with `UNSUPPORTED_ROUTE`.
 
-#### Provider debug mode
+### Location behavior note
+
+Providers do not all accept the same kind of location input:
+
+- RajaOngkir relies on hierarchy and provider-owned mapping data
+- Biteship currently relies on postal code lookup
+
+OngkirHub normalizes the request contract, but provider-compatible location refinement can still differ by provider. This is one of the main active product areas for frontend adoption flows.
+
+### Provider debug mode
 
 Set `<PROVIDER>_DEBUG=1` to enable provider-local request/response diagnostics:
 
@@ -156,12 +216,41 @@ export RAJAONGKIR_DEBUG=1
 export BITESHIP_DEBUG=1
 ```
 
-- Disabled by default.
-- When enabled, provider request/response logs are emitted to `stdout` for troubleshooting.
-- API keys and auth headers are never logged.
-- When enabled, the `/v0/quotes` response envelope includes a `debug.<providerKey>` object with request parameters.
+- disabled by default
+- API keys and auth headers are never logged
+- `/v0/quotes` responses include `debug.<providerKey>` when provider debug mode is enabled
 
-The current RajaOngkir location dataset is a bootstrap artifact. Future dataset refreshes should come from RajaOngkir APIs, not historical local source files.
+## Packages
+
+| Package | Purpose |
+| --- | --- |
+| `@ongkirhub/core` | Domain types, provider contract, validation, errors |
+| `@ongkirhub/api` | Publishable HTTP API and provider registry composition |
+| `@ongkirhub/client` | Framework-agnostic TypeScript client for the OngkirHub API |
+| `@ongkirhub/react` | Headless React hooks and provider for the OngkirHub client |
+| `@ongkirhub/provider-mock` | Deterministic development provider |
+| `@ongkirhub/provider-manual` | Configurable static-rate provider |
+| `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic and international rates |
+| `@ongkirhub/provider-biteship` | Biteship courier aggregator rates |
+
+Dependency direction:
+
+- `@ongkirhub/client` depends on `@ongkirhub/core`
+- `@ongkirhub/react` depends on `@ongkirhub/client` and `@ongkirhub/core`
+- providers depend on `@ongkirhub/core` only, never on `@ongkirhub/api`
+
+## Examples
+
+### Client smoke example
+
+A minimal runnable example lives in `examples/client-smoke`:
+
+```bash
+cd examples/client-smoke
+ONGKIRHUB_API_URL=http://localhost:3000 npx tsx src/index.ts
+```
+
+It demonstrates `getHealth()` and `getQuotes()` against a configurable API URL.
 
 ### React browser demo
 
@@ -172,7 +261,7 @@ cd examples/react-demo
 npx vite
 ```
 
-The dev server proxies API requests to `localhost:3000`, so the demo stays same-origin during local development. It demonstrates `OngkirHubProvider`, `useShippingQuotes()`, and observable loading/success/error states with two predefined routes plus an invalid request path.
+The dev server proxies API requests to `localhost:3000`, so the demo stays same-origin during local development. It demonstrates `OngkirHubProvider`, `useShippingQuotes()`, and observable loading/success/error states with known-good sample routes.
 
 ### React Google Maps location-selection demo
 
@@ -183,18 +272,16 @@ cd examples/react-google-maps-demo
 npx vite
 ```
 
-It uses Google Places Autocomplete to let users pick origin and destination addresses, normalizes the selected places into OngkirHub `LocationInput`, and fetches quotes via `@ongkirhub/react`. Supports a hardcoded default origin or Google-selected origin mode. Requires a Google Places API key.
+It uses Google Places Autocomplete to let users pick origin and destination addresses, normalizes the selected places into OngkirHub `LocationInput`, and fetches quotes via `@ongkirhub/react`. It is useful for exploring location-selection UX, not as a final merchant-ready flow.
 
-### Client smoke example
+## Onboarding notes
 
-A minimal runnable example lives in `examples/client-smoke`:
+If you are evaluating OngkirHub for adoption:
 
-```bash
-cd examples/client-smoke
-ONKIRHUB_API_URL=http://localhost:3000 npx tsx src/index.ts
-```
-
-It demonstrates `getHealth()` and `getQuotes()` against a configurable API URL.
+1. start with `mock` + `manual` to validate the API contract
+2. enable RajaOngkir or Biteship to validate a real provider path
+3. use `examples/client-smoke` or `examples/react-demo` to evaluate developer experience
+4. read provider-specific limits before assuming all providers support the same routes or location inputs
 
 ## Project status
 
