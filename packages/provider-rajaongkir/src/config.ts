@@ -7,6 +7,7 @@ export interface RajaOngkirProviderConfig {
   apiKey: string;
   baseUrl?: string;
   couriers: string[];
+  internationalCouriers?: string[];
   records: ProviderLocationRecord[];
   debug?: boolean;
 }

@@ -46,6 +46,9 @@ export function createProviderRegistry(env: ApiEnv): Map<string, ShippingProvide
         createRajaOngkirProvider({
           apiKey: rajaongkir!.apiKey,
           couriers: rajaongkir!.couriers,
+          ...(rajaongkir!.internationalCouriers
+            ? { internationalCouriers: rajaongkir!.internationalCouriers }
+            : {}),
           baseUrl: rajaongkir!.baseUrl,
           records: RAJAONGKIR_LOCATION_RECORDS,
           debug: rajaongkir!.debug,

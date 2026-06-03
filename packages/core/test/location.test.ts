@@ -67,7 +67,29 @@ describe("validateLocationInput", () => {
     expect(input.level2).toBe("Jakarta Barat");
   });
 
-  it("rejects countryCode-only input", () => {
+  it("rejects countryCode-only origin input", () => {
+    expect(() =>
+      validateLocationInput(
+        { method: "location", countryCode: "ID" },
+        "origin",
+        "origin",
+      ),
+    ).toThrow(/postalCode or both level1 and level2/);
+  });
+
+  it("accepts countryCode-only destination input", () => {
+    const input = validateLocationInput(
+      { method: "location", countryCode: "my" },
+      "destination",
+      "destination",
+    );
+    expect(input).toEqual({
+      method: "location",
+      countryCode: "MY",
+    });
+  });
+
+  it("defaults to origin strictness when role is omitted", () => {
     expect(() =>
       validateLocationInput(
         { method: "location", countryCode: "ID" },

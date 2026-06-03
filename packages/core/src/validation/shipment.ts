@@ -25,9 +25,9 @@ function assertParcel(value: unknown, index: number): asserts value is Parcel {
   }
 }
 
-function assertLocation(value: unknown, field: string) {
+function assertLocation(value: unknown, field: string, role: "origin" | "destination") {
   try {
-    return validateLocationInput(value, field);
+    return validateLocationInput(value, field, role);
   } catch (error) {
     if (error instanceof LocationValidationError) {
       throw new ProviderError("INVALID_REQUEST", error.message);
@@ -43,8 +43,8 @@ export function validateQuoteRequest(input: unknown): QuoteRequest {
 
   const body = input as Record<string, unknown>;
 
-  const origin = assertLocation(body.origin, "origin");
-  const destination = assertLocation(body.destination, "destination");
+  const origin = assertLocation(body.origin, "origin", "origin");
+  const destination = assertLocation(body.destination, "destination", "destination");
 
   if (!Array.isArray(body.parcels) || body.parcels.length === 0) {
     throw new ProviderError(

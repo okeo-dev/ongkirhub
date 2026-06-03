@@ -412,7 +412,7 @@ describe("quotes API", () => {
     });
   });
 
-  it("rejects countryCode-only location input", async () => {
+  it("rejects countryCode-only origin", async () => {
     const response = await app.request("/v0/quotes", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -426,6 +426,27 @@ describe("quotes API", () => {
     });
 
     expect(response.status).toBe(400);
+  });
+
+  it("accepts countryCode-only destination", async () => {
+    const response = await app.request("/v0/quotes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        providers: ["mock"],
+        origin: validOrigin,
+        destination: { method: "location", countryCode: "MY" },
+        parcels: [{ weightGrams: 1000 }],
+        totalWeightGrams: 1000,
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.requestSummary.destination).toEqual({
+      method: "location",
+      countryCode: "MY",
+    });
   });
 
   it("rejects skipped hierarchy", async () => {

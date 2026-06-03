@@ -1,5 +1,5 @@
 import type { Duration, Quote } from "@ongkirhub/core";
-import type { RajaOngkirCostItem } from "./client.js";
+import type { RajaOngkirCostItem, RajaOngkirInternationalCostItem } from "./client.js";
 import { RAJAONGKIR_PROVIDER_KEY } from "./location/resolve.js";
 
 export function parseEstimatedDuration(etd: string): Duration {
@@ -44,6 +44,30 @@ export function mapRajaOngkirCostsToQuotes(items: RajaOngkirCostItem[]): Quote[]
       courierName: item.name,
       service: item.service,
       description: item.description,
+      rawEtd: item.etd,
+    },
+  }));
+}
+
+export function mapRajaOngkirInternationalCostsToQuotes(
+  items: RajaOngkirInternationalCostItem[],
+): Quote[] {
+  return items.map((item) => ({
+    providerKey: RAJAONGKIR_PROVIDER_KEY,
+    serviceCode: `${item.code}-${item.service}`.toUpperCase(),
+    serviceName: `${item.name} ${item.service}`,
+    price: {
+      amount: item.cost,
+      currency: item.currency || "IDR",
+    },
+    estimatedDuration: parseEstimatedDuration(item.etd),
+    eta: item.etd,
+    metadata: {
+      courierCode: item.code,
+      courierName: item.name,
+      service: item.service,
+      description: item.description,
+      currency: item.currency,
       rawEtd: item.etd,
     },
   }));

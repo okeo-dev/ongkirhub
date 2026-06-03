@@ -1,6 +1,7 @@
 export interface RajaOngkirEnvConfig {
   apiKey: string;
   couriers: string[];
+  internationalCouriers?: string[];
   baseUrl?: string;
   debug?: boolean;
 }
@@ -45,6 +46,7 @@ function loadRajaOngkirConfig(
 ): RajaOngkirEnvConfig | undefined {
   const apiKey = env.RAJAONGKIR_API_KEY?.trim();
   const couriers = parseCourierList(env.RAJAONGKIR_COURIERS);
+  const internationalCouriers = parseCourierList(env.RAJAONGKIR_INTERNATIONAL_COURIERS);
   const baseUrl = env.RAJAONGKIR_BASE_URL?.trim();
   const debug = env.RAJAONGKIR_DEBUG === "1" || env.RAJAONGKIR_DEBUG === "true";
 
@@ -55,6 +57,7 @@ function loadRajaOngkirConfig(
   return {
     apiKey: apiKey ?? "",
     couriers,
+    ...(internationalCouriers.length > 0 ? { internationalCouriers } : {}),
     debug,
     ...(baseUrl ? { baseUrl } : {}),
   };
@@ -77,11 +80,13 @@ function requireRajaOngkirConfig(
     );
   }
 
+  const internationalCouriers = parseCourierList(env.RAJAONGKIR_INTERNATIONAL_COURIERS);
   const baseUrl = env.RAJAONGKIR_BASE_URL?.trim();
   const debug = env.RAJAONGKIR_DEBUG === "1" || env.RAJAONGKIR_DEBUG === "true";
   return {
     apiKey,
     couriers,
+    ...(internationalCouriers.length > 0 ? { internationalCouriers } : {}),
     debug,
     ...(baseUrl ? { baseUrl } : {}),
   };

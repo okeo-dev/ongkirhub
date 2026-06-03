@@ -51,6 +51,7 @@ export class LocationValidationError extends Error {
 export function validateLocationInput(
   value: unknown,
   field: string,
+  role: "origin" | "destination" = "origin",
 ): LocationMethodInput {
   if (value === null || typeof value !== "object") {
     throw new LocationValidationError(`${field} must be an object`);
@@ -79,10 +80,12 @@ export function validateLocationInput(
   const hasLevel1 = hasNonEmptyString(raw.level1);
   const hasLevel2 = hasNonEmptyString(raw.level2);
 
-  if (!hasPostal && !(hasLevel1 && hasLevel2)) {
-    throw new LocationValidationError(
-      `${field} must include postalCode or both level1 and level2`,
-    );
+  if (role === "origin") {
+    if (!hasPostal && !(hasLevel1 && hasLevel2)) {
+      throw new LocationValidationError(
+        `${field} must include postalCode or both level1 and level2`,
+      );
+    }
   }
 
   const normalized: LocationMethodInput = {

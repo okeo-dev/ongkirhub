@@ -9,7 +9,7 @@ Included:
 - Normalized **rates and ETA** quotes
 - `@ongkirhub/core` provider contract
 - `@ongkirhub/api` HTTP server (`GET /health`, `POST /v0/quotes`)
-- Reference providers: `mock` (deterministic), `manual` (configurable static rates), and optional real providers `rajaongkir` (RajaOngkir domestic rates) and `biteship` (Biteship courier aggregator)
+- Reference providers: `mock` (deterministic), `manual` (configurable static rates), and optional real providers `rajaongkir` (RajaOngkir domestic and international rates) and `biteship` (Biteship courier aggregator)
 
 Not included yet:
 
@@ -67,7 +67,7 @@ docker run --rm -p 3000:3000 ongkirhub
 | `@ongkirhub/api` | Publishable HTTP API and provider registry composition |
 | `@ongkirhub/provider-mock` | Deterministic development provider |
 | `@ongkirhub/provider-manual` | Configurable static-rate provider |
-| `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic rates (optional, API-composed) |
+| `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic and international rates (optional, API-composed) |
 | `@ongkirhub/provider-biteship` | Biteship courier aggregator rates (optional, API-composed) |
 
 Dependency rule: **providers depend on `core` only**, never on `api`.
@@ -83,9 +83,39 @@ export ENABLED_PROVIDERS=mock,rajaongkir
 export RAJAONGKIR_API_KEY=your-api-key
 export RAJAONGKIR_COURIERS=jne,pos
 # optional:
+# export RAJAONGKIR_INTERNATIONAL_COURIERS=pos,slis,expedito,ray
 # export RAJAONGKIR_BASE_URL=https://rajaongkir.komerce.id/api/v1
 pnpm dev
 ```
+
+**Courier lists:**
+
+- `RAJAONGKIR_COURIERS` is the default courier list used for all routes.
+- `RAJAONGKIR_INTERNATIONAL_COURIERS` is an optional override used only for international routes (`ID` origin → non-`ID` destination).
+- If `RAJAONGKIR_INTERNATIONAL_COURIERS` is not set, international routes fall back to `RAJAONGKIR_COURIERS`.
+
+**Route behavior:**
+
+| Route | Origin | Destination | Path |
+|-------|--------|-------------|------|
+| Domestic | `ID` | `ID` | `POST /calculate/domestic-cost` |
+| International | `ID` | non-`ID` | `POST /calculate/international-cost` |
+| Unsupported | non-`ID` | any | Rejected with `UNSUPPORTED_ROUTE` |
+
+**International destination input:**
+
+For international quotes, the destination only needs `countryCode`:
+
+```json
+{
+  "destination": {
+    "method": "location",
+    "countryCode": "MY"
+  }
+}
+```
+
+The provider resolves the country code to the RajaOngkir country ID internally. No postal code or city hierarchy is required for international destinations.
 
 If `rajaongkir` is not listed in `ENABLED_PROVIDERS`, RajaOngkir env vars are not required.
 

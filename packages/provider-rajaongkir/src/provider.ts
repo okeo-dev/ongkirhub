@@ -10,12 +10,16 @@ import {
   type RajaOngkirProviderConfig,
   validateRajaOngkirProviderConfig,
 } from "./config.js";
+import { resolveCountryId } from "./location/country-resolve.js";
 import {
   RAJAONGKIR_PROVIDER_KEY,
   extractRajaOngkirApiId,
   resolveDistrict,
 } from "./location/resolve.js";
-import { mapRajaOngkirCostsToQuotes } from "./quotes.js";
+import {
+  mapRajaOngkirCostsToQuotes,
+  mapRajaOngkirInternationalCostsToQuotes,
+} from "./quotes.js";
 
 export interface RajaOngkirProvider extends ShippingProvider {
   getDebugInfo?(): object;
@@ -32,7 +36,7 @@ export function createRajaOngkirProvider(
   });
 
   const capabilities: ProviderCapabilities = {
-    coverage: ["domestic"],
+    coverage: ["domestic", "international"],
     dimensionsRequired: false,
     codSupported: false,
     serviceFilteringSupported: false,
@@ -45,42 +49,82 @@ export function createRajaOngkirProvider(
     name: "RajaOngkir",
     capabilities,
     async getQuotes(request: QuoteRequest): Promise<Quote[]> {
-      if (request.origin.countryCode !== "ID" || request.destination.countryCode !== "ID") {
+      if (request.origin.countryCode !== "ID") {
         throw new ProviderError(
           "UNSUPPORTED_ROUTE",
-          "RajaOngkir v0.1 only supports domestic Indonesia routes",
+          "RajaOngkir only supports Indonesia-origin shipments",
           { providerKey: RAJAONGKIR_PROVIDER_KEY },
         );
       }
 
-      const origin = resolveDistrict(request.origin, validated.records);
-      const destination = resolveDistrict(
-        request.destination,
-        validated.records,
-      );
+      const isDomestic = request.destination.countryCode === "ID";
 
-      const originId = extractRajaOngkirApiId(origin.providerId);
-      const destinationId = extractRajaOngkirApiId(destination.providerId);
-
-      if (validated.debug) {
-        lastDebugInfo = {
-          originId,
-          destinationId,
-          weightGrams: request.totalWeightGrams,
-          couriers: validated.couriers,
-        };
+      if (isDomestic) {
+        return handleDomestic(request);
       }
 
-      const costs = await client.calculateDomesticCost({
+      return handleInternational(request);
+    },
+  };
+
+  async function handleDomestic(request: QuoteRequest): Promise<Quote[]> {
+    const origin = resolveDistrict(request.origin, validated.records);
+    const destination = resolveDistrict(
+      request.destination,
+      validated.records,
+    );
+
+    const originId = extractRajaOngkirApiId(origin.providerId);
+    const destinationId = extractRajaOngkirApiId(destination.providerId);
+
+    if (validated.debug) {
+      lastDebugInfo = {
+        route: "domestic",
         originId,
         destinationId,
         weightGrams: request.totalWeightGrams,
         couriers: validated.couriers,
-      });
+      };
+    }
 
-      return mapRajaOngkirCostsToQuotes(costs);
-    },
-  };
+    const costs = await client.calculateDomesticCost({
+      originId,
+      destinationId,
+      weightGrams: request.totalWeightGrams,
+      couriers: validated.couriers,
+    });
+
+    return mapRajaOngkirCostsToQuotes(costs);
+  }
+
+  async function handleInternational(request: QuoteRequest): Promise<Quote[]> {
+    const origin = resolveDistrict(request.origin, validated.records);
+    const originId = extractRajaOngkirApiId(origin.providerId);
+
+    const countryRecord = resolveCountryId(request.destination.countryCode);
+
+    const internationalCouriers = validated.internationalCouriers ?? validated.couriers;
+
+    if (validated.debug) {
+      lastDebugInfo = {
+        route: "international",
+        originId,
+        destinationCountryId: countryRecord.providerId,
+        destinationCountryCode: countryRecord.countryCode,
+        weightGrams: request.totalWeightGrams,
+        couriers: internationalCouriers,
+      };
+    }
+
+    const costs = await client.calculateInternationalCost({
+      originId,
+      destinationCountryId: countryRecord.providerId,
+      weightGrams: request.totalWeightGrams,
+      couriers: internationalCouriers,
+    });
+
+    return mapRajaOngkirInternationalCostsToQuotes(costs);
+  }
 
   if (validated.debug) {
     provider.getDebugInfo = () => lastDebugInfo ?? {};
