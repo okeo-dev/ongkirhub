@@ -1,4 +1,5 @@
 import type { ShippingProvider } from "@ongkirhub/core";
+import { createBiteshipProvider } from "@ongkirhub/provider-biteship";
 import { defaultManualProvider } from "@ongkirhub/provider-manual";
 import { mockProvider } from "@ongkirhub/provider-mock";
 import {
@@ -7,7 +8,7 @@ import {
 } from "@ongkirhub/provider-rajaongkir";
 import type { ApiEnv } from "../config/env.js";
 
-export const BUILT_IN_PROVIDER_KEYS = ["mock", "manual", "rajaongkir"] as const;
+export const BUILT_IN_PROVIDER_KEYS = ["mock", "manual", "rajaongkir", "biteship"] as const;
 
 const staticProviders: Record<"mock" | "manual", ShippingProvider> = {
   mock: mockProvider,
@@ -30,6 +31,12 @@ export function createProviderRegistry(env: ApiEnv): Map<string, ShippingProvide
     );
   }
 
+  if (enabledProviders.includes("biteship") && !env.biteship) {
+    throw new Error(
+      "Biteship is enabled in ENABLED_PROVIDERS but Biteship configuration is missing",
+    );
+  }
+
   const registry = new Map<string, ShippingProvider>();
 
   for (const key of enabledProviders) {
@@ -42,6 +49,19 @@ export function createProviderRegistry(env: ApiEnv): Map<string, ShippingProvide
           baseUrl: rajaongkir!.baseUrl,
           records: RAJAONGKIR_LOCATION_RECORDS,
           debug: rajaongkir!.debug,
+        }),
+      );
+      continue;
+    }
+
+    if (key === "biteship") {
+      registry.set(
+        key,
+        createBiteshipProvider({
+          apiKey: env.biteship!.apiKey,
+          couriers: env.biteship!.couriers,
+          baseUrl: env.biteship!.baseUrl,
+          debug: env.biteship!.debug,
         }),
       );
       continue;

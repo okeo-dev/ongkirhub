@@ -9,7 +9,7 @@ Included:
 - Normalized **rates and ETA** quotes
 - `@ongkirhub/core` provider contract
 - `@ongkirhub/api` HTTP server (`GET /health`, `POST /v0/quotes`)
-- Reference providers: `mock` (deterministic), `manual` (configurable static rates), and optional `rajaongkir` (RajaOngkir domestic rates)
+- Reference providers: `mock` (deterministic), `manual` (configurable static rates), and optional real providers `rajaongkir` (RajaOngkir domestic rates) and `biteship` (Biteship courier aggregator)
 
 Not included yet:
 
@@ -68,10 +68,13 @@ docker run --rm -p 3000:3000 ongkirhub
 | `@ongkirhub/provider-mock` | Deterministic development provider |
 | `@ongkirhub/provider-manual` | Configurable static-rate provider |
 | `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic rates (optional, API-composed) |
+| `@ongkirhub/provider-biteship` | Biteship courier aggregator rates (optional, API-composed) |
 
 Dependency rule: **providers depend on `core` only**, never on `api`.
 
-### Enable RajaOngkir (optional)
+### Enable real providers (optional)
+
+#### RajaOngkir
 
 Add `rajaongkir` to `ENABLED_PROVIDERS` and set RajaOngkir credentials. The location dataset ships compiled inside `@ongkirhub/provider-rajaongkir` (no YAML parsing at API startup).
 
@@ -86,18 +89,34 @@ pnpm dev
 
 If `rajaongkir` is not listed in `ENABLED_PROVIDERS`, RajaOngkir env vars are not required.
 
-#### RajaOngkir debug mode
+#### Biteship
 
-Set `RAJAONGKIR_DEBUG=1` to enable provider-local request/response diagnostics:
+Add `biteship` to `ENABLED_PROVIDERS` and set Biteship credentials:
+
+```bash
+export ENABLED_PROVIDERS=mock,biteship
+export BITESHIP_API_KEY=your-api-key
+export BITESHIP_COURIERS=jne,sicepat
+# optional:
+# export BITESHIP_BASE_URL=https://api.biteship.com
+pnpm dev
+```
+
+Biteship v0.1 uses **postal code lookup** for origin and destination. The request must include `postalCode` on both `origin` and `destination`. Non-Indonesia routes are rejected with `UNSUPPORTED_ROUTE`.
+
+#### Provider debug mode
+
+Set `<PROVIDER>_DEBUG=1` to enable provider-local request/response diagnostics:
 
 ```bash
 export RAJAONGKIR_DEBUG=1
+export BITESHIP_DEBUG=1
 ```
 
 - Disabled by default.
-- When enabled, RajaOngkir request/response logs are emitted to `stdout` for troubleshooting.
+- When enabled, provider request/response logs are emitted to `stdout` for troubleshooting.
 - API keys and auth headers are never logged.
-- When enabled, the `/v0/quotes` response envelope includes a `debug.rajaongkir` object with resolved `originId`, `destinationId`, and request parameters.
+- When enabled, the `/v0/quotes` response envelope includes a `debug.<providerKey>` object with request parameters.
 
 The current RajaOngkir location dataset is a bootstrap artifact. Future dataset refreshes should come from RajaOngkir APIs, not historical local source files.
 

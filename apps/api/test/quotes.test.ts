@@ -29,6 +29,18 @@ const rajaongkirDebugEnv = {
   RAJAONGKIR_DEBUG: "1",
 };
 
+const biteshipEnv = {
+  PORT: "3000",
+  ENABLED_PROVIDERS: "biteship",
+  BITESHIP_API_KEY: "test-api-key",
+  BITESHIP_COURIERS: "jne,sicepat",
+};
+
+const biteshipDebugEnv = {
+  ...biteshipEnv,
+  BITESHIP_DEBUG: "1",
+};
+
 describe("loadEnv", () => {
   it("succeeds without RajaOngkir config when RajaOngkir is disabled", () => {
     const env = loadEnv({ PORT: "3000", ENABLED_PROVIDERS: "mock" });
@@ -65,6 +77,37 @@ describe("loadEnv", () => {
       baseUrl: "https://example.test/api/v1",
     });
   });
+
+  it("fails when Biteship is enabled without BITESHIP_API_KEY", () => {
+    expect(() =>
+      loadEnv({
+        ENABLED_PROVIDERS: "biteship",
+        BITESHIP_COURIERS: "jne",
+      }),
+    ).toThrow(/BITESHIP_API_KEY is required/);
+  });
+
+  it("fails when Biteship is enabled without BITESHIP_COURIERS", () => {
+    expect(() =>
+      loadEnv({
+        ENABLED_PROVIDERS: "biteship",
+        BITESHIP_API_KEY: "test-api-key",
+      }),
+    ).toThrow(/BITESHIP_COURIERS is required/);
+  });
+
+  it("loads Biteship config when Biteship is enabled", () => {
+    const env = loadEnv({
+      ...biteshipEnv,
+      BITESHIP_BASE_URL: "https://api.test.biteship.com",
+    });
+    expect(env.biteship).toEqual({
+      apiKey: "test-api-key",
+      couriers: ["jne", "sicepat"],
+      debug: false,
+      baseUrl: "https://api.test.biteship.com",
+    });
+  });
 });
 
 describe("provider registry", () => {
@@ -86,6 +129,13 @@ describe("provider registry", () => {
     const registry = createProviderRegistry(env);
     expect([...registry.keys()]).toEqual(["rajaongkir"]);
     expect(registry.get("rajaongkir")?.key).toBe("rajaongkir");
+  });
+
+  it("registers Biteship when configured", () => {
+    const env = loadEnv(biteshipEnv);
+    const registry = createProviderRegistry(env);
+    expect([...registry.keys()]).toEqual(["biteship"]);
+    expect(registry.get("biteship")?.key).toBe("biteship");
   });
 });
 
@@ -120,6 +170,25 @@ describe("quotes API", () => {
     expect(body).toMatchObject({
       status: "ok",
       providers: ["rajaongkir"],
+    });
+    expect(JSON.stringify(body)).not.toMatch(/test-api-key/);
+  });
+
+  it("includes Biteship in health only when registered", async () => {
+    const biteEnv = loadEnv(biteshipEnv);
+    const biteRegistry = createProviderRegistry(biteEnv);
+    const biteApp = createApp({
+      env: biteEnv,
+      registry: biteRegistry,
+      version: "test",
+    });
+
+    const response = await biteApp.request("/health");
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      status: "ok",
+      providers: ["biteship"],
     });
     expect(JSON.stringify(body)).not.toMatch(/test-api-key/);
   });
@@ -193,6 +262,92 @@ describe("quotes API", () => {
         destinationId: expect.any(String),
         weightGrams: 1000,
         couriers: ["jne", "pos"],
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("includes provider debug metadata when Biteship debug is enabled", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          pricing: [
+            {
+              company: "jne",
+              courier_name: "JNE",
+              courier_code: "jne",
+              courier_service_name: "Reguler",
+              courier_service_code: "reg",
+              currency: "IDR",
+              description: "Layanan reguler",
+              duration: "1 - 2 days",
+              shipment_duration_range: "1 - 2",
+              shipment_duration_unit: "days",
+              service_type: "standard",
+              shipping_type: "parcel",
+              price: 14000,
+              shipping_fee: 14000,
+              shipping_fee_discount: 0,
+              shipping_fee_surcharge: 0,
+              insurance_fee: 0,
+              cash_on_delivery_fee: 0,
+            },
+          ],
+        }),
+      }),
+    );
+
+    try {
+      const biteEnv = loadEnv(biteshipDebugEnv);
+      const biteRegistry = createProviderRegistry(biteEnv);
+      const biteApp = createApp({
+        env: biteEnv,
+        registry: biteRegistry,
+        version: "test",
+      });
+
+      const response = await biteApp.request("/v0/quotes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          providers: ["biteship"],
+          origin: {
+            method: "location",
+            countryCode: "ID",
+            postalCode: "12440",
+            level1: "DKI Jakarta",
+            level2: "Jakarta Selatan",
+          },
+          destination: {
+            method: "location",
+            countryCode: "ID",
+            postalCode: "12240",
+            level1: "DKI Jakarta",
+            level2: "Jakarta Pusat",
+          },
+          parcels: [{ weightGrams: 1000 }],
+          totalWeightGrams: 1000,
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.quotes).toHaveLength(1);
+      expect(body.requestSummary).toMatchObject({
+        origin: { countryCode: "ID", postalCode: "12440" },
+        destination: { countryCode: "ID", postalCode: "12240" },
+      });
+      expect(body.debug).toBeDefined();
+      expect(body.debug.biteship).toMatchObject({
+        originPostalCode: "12440",
+        destinationPostalCode: "12240",
+        weightGrams: 1000,
+        couriers: ["jne", "sicepat"],
       });
     } finally {
       vi.unstubAllGlobals();

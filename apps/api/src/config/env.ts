@@ -5,11 +5,19 @@ export interface RajaOngkirEnvConfig {
   debug?: boolean;
 }
 
+export interface BiteshipEnvConfig {
+  apiKey: string;
+  couriers: string[];
+  baseUrl?: string;
+  debug?: boolean;
+}
+
 export interface ApiEnv {
   port: number;
   host: string;
   enabledProviders: string[];
   rajaongkir?: RajaOngkirEnvConfig;
+  biteship?: BiteshipEnvConfig;
 }
 
 function parseProviderList(value: string | undefined): string[] {
@@ -79,6 +87,53 @@ function requireRajaOngkirConfig(
   };
 }
 
+function loadBiteshipConfig(
+  env: NodeJS.ProcessEnv,
+): BiteshipEnvConfig | undefined {
+  const apiKey = env.BITESHIP_API_KEY?.trim();
+  const couriers = parseCourierList(env.BITESHIP_COURIERS);
+  const baseUrl = env.BITESHIP_BASE_URL?.trim();
+  const debug = env.BITESHIP_DEBUG === "1" || env.BITESHIP_DEBUG === "true";
+
+  if (!apiKey && couriers.length === 0 && !baseUrl) {
+    return undefined;
+  }
+
+  return {
+    apiKey: apiKey ?? "",
+    couriers,
+    debug,
+    ...(baseUrl ? { baseUrl } : {}),
+  };
+}
+
+function requireBiteshipConfig(
+  env: NodeJS.ProcessEnv,
+): BiteshipEnvConfig {
+  const apiKey = env.BITESHIP_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error(
+      "BITESHIP_API_KEY is required when biteship is enabled in ENABLED_PROVIDERS",
+    );
+  }
+
+  const couriers = parseCourierList(env.BITESHIP_COURIERS);
+  if (couriers.length === 0) {
+    throw new Error(
+      "BITESHIP_COURIERS is required when biteship is enabled in ENABLED_PROVIDERS",
+    );
+  }
+
+  const baseUrl = env.BITESHIP_BASE_URL?.trim();
+  const debug = env.BITESHIP_DEBUG === "1" || env.BITESHIP_DEBUG === "true";
+  return {
+    apiKey,
+    couriers,
+    debug,
+    ...(baseUrl ? { baseUrl } : {}),
+  };
+}
+
 export function loadEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): ApiEnv {
@@ -93,10 +148,16 @@ export function loadEnv(
     ? requireRajaOngkirConfig(env)
     : loadRajaOngkirConfig(env);
 
+  const biteshipEnabled = enabledProviders.includes("biteship");
+  const biteship = biteshipEnabled
+    ? requireBiteshipConfig(env)
+    : loadBiteshipConfig(env);
+
   return {
     port,
     host: env.HOST ?? "0.0.0.0",
     enabledProviders,
     ...(rajaongkir ? { rajaongkir } : {}),
+    ...(biteship ? { biteship } : {}),
   };
 }
