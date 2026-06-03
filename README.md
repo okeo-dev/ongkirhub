@@ -1,6 +1,6 @@
 # OngkirHub
 
-OngkirHub is an open-source shipping integration framework for Indonesia-focused logistics. Integrate once against a stable provider contract, then plug in courier adapters without rewriting your application.
+OngkirHub is an open-source shipping integration framework for logistics integrations across providers and countries. Integrate once against a stable provider contract, then plug in courier adapters without rewriting your application.
 
 ## v0.1 scope
 
@@ -66,14 +66,13 @@ docker run --rm -p 3000:3000 ongkirhub
 | `@ongkirhub/core` | Domain types, provider contract, validation, errors |
 | `@ongkirhub/client` | Framework-agnostic TypeScript client for the OngkirHub API |
 | `@ongkirhub/react` | Headless React hooks and provider for the OngkirHub client |
-| `@ongkirhub/widget` | Embeddable vanilla-JS shipping calculator widget |
 | `@ongkirhub/api` | Publishable HTTP API and provider registry composition |
 | `@ongkirhub/provider-mock` | Deterministic development provider |
 | `@ongkirhub/provider-manual` | Configurable static-rate provider |
 | `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic and international rates (optional, API-composed) |
 | `@ongkirhub/provider-biteship` | Biteship courier aggregator rates (optional, API-composed) |
 
-Dependency rule: **providers depend on `core` only**, never on `api`. Frontend packages (`client`, `react`, `widget`) depend on `core` + `client`.
+Dependency rule: **providers depend on `core` only**, never on `api`. Frontend packages (`client`, `react`) depend on `core` + `client`.
 
 ### Enable real providers (optional)
 
@@ -196,34 +195,6 @@ ONKIRHUB_API_URL=http://localhost:3000 npx tsx src/index.ts
 ```
 
 It demonstrates `getHealth()` and `getQuotes()` against a configurable API URL.
-
-### Widget embedding
-
-For non-React pages, drop in the widget:
-
-```html
-<div id="shipping-calculator"></div>
-<script src="https://cdn.example.com/ongkirhub-widget.js"></script>
-<script>
-  new OngkirHubWidget({
-    apiUrl: "https://api.ongkirhub.example.com",
-    container: "#shipping-calculator",
-  }).mount();
-</script>
-```
-
-Or import as an ESM module:
-
-```ts
-import { OngkirHubWidget } from "@ongkirhub/widget";
-
-const widget = new OngkirHubWidget({
-  apiUrl: "https://api.ongkirhub.example.com",
-  container: document.getElementById("calculator")!,
-});
-widget.mount();
-// later: widget.destroy();
-```
 
 ## Project status
 
