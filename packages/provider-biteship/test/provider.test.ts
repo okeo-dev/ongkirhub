@@ -227,6 +227,33 @@ describe("createBiteshipProvider", () => {
     ).rejects.toMatchObject({ code: "UPSTREAM_AUTH_FAILURE" });
   });
 
+  it("surfaces upstream error payload text when Biteship returns error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          success: false,
+          error: "No sufficient balance to call rates API. Please top up your balance",
+        }),
+      }),
+    );
+
+    const provider = createBiteshipProvider(baseConfig);
+    await expect(
+      provider.getQuotes({
+        origin: { method: "location", countryCode: "ID", postalCode: "12440" },
+        destination: { method: "location", countryCode: "ID", postalCode: "12240" },
+        parcels: [{ weightGrams: 500 }],
+        totalWeightGrams: 500,
+      }),
+    ).rejects.toMatchObject({
+      code: "UNKNOWN_PROVIDER_FAILURE",
+      message: "No sufficient balance to call rates API. Please top up your balance",
+    });
+  });
+
   it("passes provider conformance with mocked upstream", async () => {
     vi.stubGlobal(
       "fetch",

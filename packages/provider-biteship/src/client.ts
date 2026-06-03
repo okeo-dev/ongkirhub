@@ -36,6 +36,7 @@ export interface BiteshipPricing {
 
 export interface BiteshipRatesResponse {
   success: boolean;
+  error?: string;
   message?: string;
   code?: number;
   pricing?: BiteshipPricing[];
@@ -101,11 +102,14 @@ export class BiteshipClient {
     const payload = (await response.json()) as BiteshipRatesResponse;
 
     if (this.debug) {
-      console.log("[biteship] response", {
-        status: response.status,
-        ok: response.ok,
-        payload,
-      });
+      console.dir(
+        {
+          status: response.status,
+          ok: response.ok,
+          payload,
+        },
+        { depth: null },
+      );
     }
 
     if (!response.ok) {
@@ -115,7 +119,9 @@ export class BiteshipClient {
     if (!payload.success || !Array.isArray(payload.pricing)) {
       throw new ProviderError(
         "UNKNOWN_PROVIDER_FAILURE",
-        payload.message ?? "Biteship response did not include pricing",
+        payload.message ??
+          payload.error ??
+          "Biteship response did not include pricing",
         { providerKey: "biteship" },
       );
     }
@@ -129,7 +135,9 @@ function mapHttpFailure(
   payload: BiteshipRatesResponse,
 ): ProviderError {
   const message =
-    payload.message ?? `Biteship request failed with status ${status}`;
+    payload.message ??
+    payload.error ??
+    `Biteship request failed with status ${status}`;
 
   if (status === 401 || status === 403) {
     return new ProviderError("UPSTREAM_AUTH_FAILURE", message, {
