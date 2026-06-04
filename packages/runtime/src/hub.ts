@@ -36,6 +36,7 @@ export function createOngkirHub(options: OngkirHubOptions): OngkirHub {
 
   return {
     async getQuotes(request, options) {
+      const quoteRequest = validateQuoteRequest(request);
       const selectedProviders = resolveProviders(registry, options?.providers);
 
       if (selectedProviders.length === 0) {
@@ -45,7 +46,7 @@ export function createOngkirHub(options: OngkirHubOptions): OngkirHub {
       const quotes: Quote[] = [];
       for (const provider of selectedProviders) {
         try {
-          const providerQuotes = await provider.getQuotes(request);
+          const providerQuotes = await provider.getQuotes(quoteRequest);
           quotes.push(...providerQuotes);
         } catch (error) {
           if (isProviderError(error)) {

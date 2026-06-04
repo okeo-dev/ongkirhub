@@ -1,4 +1,4 @@
-import type { ShippingProvider } from "@ongkirhub/core";
+import { ProviderError, type ShippingProvider } from "@ongkirhub/core";
 
 export function listProviderKeys(registry: Map<string, ShippingProvider>): string[] {
   return [...registry.keys()].sort();
@@ -18,7 +18,7 @@ export function resolveProviders(
   for (const key of keys) {
     const provider = registry.get(key);
     if (!provider) {
-      throw new Error(`Unknown provider: ${key}`);
+      throw new ProviderError("INVALID_REQUEST", `Unknown provider: ${key}`);
     }
     providers.push(provider);
   }

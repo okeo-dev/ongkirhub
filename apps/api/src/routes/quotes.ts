@@ -62,10 +62,6 @@ export function registerQuotesRoute(
 
       return context.json(response);
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith("Unknown provider:")) {
-        return context.json({ error: error.message }, 400);
-      }
-
       if (
         isProviderError(error) &&
         error.code === "INVALID_REQUEST" &&
@@ -74,6 +70,13 @@ export function registerQuotesRoute(
         return context.json(
           { error: error.message, code: error.code },
           503,
+        );
+      }
+
+      if (isProviderError(error) && error.code === "INVALID_REQUEST") {
+        return context.json(
+          { error: error.message, code: error.code },
+          400,
         );
       }
 

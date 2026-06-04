@@ -101,6 +101,21 @@ describe("createOngkirHub", () => {
     ).rejects.toMatchObject({ code: "UPSTREAM_UNAVAILABLE" });
   });
 
+  it("throws structured error for invalid request before provider dispatch", async () => {
+    const hub = createOngkirHub({
+      providers: [makeProvider("mock")],
+    });
+
+    await expect(
+      hub.getQuotes({
+        origin: { method: "location", countryCode: "ID" },
+        destination: { method: "location", countryCode: "ID", level1: "C", level2: "D" },
+        parcels: [{ weightGrams: 1000 }],
+        totalWeightGrams: 1000,
+      } as any),
+    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+  });
+
   it("throws when no providers are configured", async () => {
     const hub = createOngkirHub({ providers: [] });
 

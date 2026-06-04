@@ -4,8 +4,9 @@ Use one quote API contract even when shipping providers use different location I
 
 OngkirHub is an open-source shipping integration framework for teams that want to integrate multiple logistics providers without rewriting their application for each one. Its primary asset is the **provider contract** — a shared interface for quote execution, location normalization, and structured errors.
 
-Current shipped path (today):
+Current shipped paths (v0.1 alpha):
 
+**HTTP path:**
 ```text
 Browser / frontend
   ↓
@@ -13,11 +14,12 @@ Browser / frontend
   ↓
 @ongkirhub/api  (optional HTTP adapter)
   ↓
+@ongkirhub/runtime
+  ↓
 Providers
 ```
 
-Planned embedded runtime path (future direction):
-
+**Embedded runtime path (current alpha):**
 ```text
 Application
   ↓
@@ -139,7 +141,7 @@ If you want a real provider next, enable RajaOngkir or Biteship below.
 - **Backend/API consumer** (current recommended path): run `@ongkirhub/api` as an HTTP server, enable one or more providers, and call `/v0/quotes`.
 - **TypeScript or frontend app developer**: start with `@ongkirhub/client` against the HTTP API, then use `@ongkirhub/react` for React apps.
 - **Provider author**: start from the provider contract in `@ongkirhub/core` and use the provider authoring docs plus `mock` or `manual` as references.
-- **Future embedded runtime consumer**: planned direction via `@ongkirhub/runtime`, not yet implemented.
+- **Embedded runtime consumer** (current alpha): import `@ongkirhub/runtime` directly, build a hub with provider instances, and call `hub.getQuotes()` without a web server.
 
 ## Real provider setup
 
@@ -240,7 +242,8 @@ export BITESHIP_DEBUG=1
 | Package | Purpose |
 | --- | --- |
 | `@ongkirhub/core` | Domain types, provider contract, validation, errors |
-| `@ongkirhub/api` | Optional HTTP API adapter and server reference deployment |
+| `@ongkirhub/runtime` | Provider orchestration, quote aggregation, health (current alpha) |
+| `@ongkirhub/api` | Optional HTTP API adapter over runtime |
 | `@ongkirhub/client` | Framework-agnostic TypeScript client for the OngkirHub API |
 | `@ongkirhub/react` | Headless React hooks and provider for the OngkirHub client |
 | `@ongkirhub/provider-mock` | Deterministic development provider |

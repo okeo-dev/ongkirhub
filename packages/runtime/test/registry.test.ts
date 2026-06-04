@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ProviderError } from "@ongkirhub/core";
 import { listProviderKeys, resolveProviders } from "../src/registry.js";
 
 function makeProvider(key: string) {
@@ -60,8 +61,10 @@ describe("resolveProviders", () => {
     expect(result.map((p) => p.key)).toEqual(["manual", "mock"]);
   });
 
-  it("throws for unknown provider key", () => {
+  it("throws structured error for unknown provider key", () => {
     const registry = new Map([["mock", makeProvider("mock")]]);
-    expect(() => resolveProviders(registry, "unknown")).toThrow(/Unknown provider: unknown/);
+    expect(() => resolveProviders(registry, "unknown")).toThrow(
+      new ProviderError("INVALID_REQUEST", "Unknown provider: unknown"),
+    );
   });
 });

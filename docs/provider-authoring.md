@@ -56,9 +56,11 @@ Load secrets and upstream credentials in your app composition layer, not inside 
 
 ## Registering in the orchestration layer
 
-**Current (v0.1):** add your built provider to `apps/api/src/registry/providers.ts` and include its key in `ENABLED_PROVIDERS`.
+**Current (v0.1):** provider orchestration lives in `@ongkirhub/runtime`. The HTTP adapter (`apps/api`) still composes built-in providers in `apps/api/src/registry/providers.ts`, then passes them into `createOngkirHub()`.
 
-**Future direction:** registration moves to `@ongkirhub/runtime`, making provider orchestration usable without a web server.
+For a new built-in provider, add your provider factory to `apps/api/src/registry/providers.ts` and include its key in `ENABLED_PROVIDERS`.
+
+Embedded consumers can also compose providers directly and pass them to `createOngkirHub()` without using the HTTP layer.
 
 ## Location mappings (real providers)
 
