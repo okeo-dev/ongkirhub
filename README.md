@@ -139,7 +139,8 @@ If you want a real provider next, enable RajaOngkir or Biteship below.
 ## Common adoption paths
 
 - **Backend/API consumer** (current recommended path): run `@ongkirhub/api` as an HTTP server, enable one or more providers, and call `/v0/quotes`.
-- **TypeScript or frontend app developer**: start with `@ongkirhub/client` against the HTTP API, then use `@ongkirhub/react` for React apps.
+- **Browser React app**: use `@ongkirhub/react` with the HTTP API. Browser apps cannot bundle provider SDKs or secrets.
+- **Server-side React app** (Next.js RSC, Remix, etc.): import `@ongkirhub/runtime` directly in server code and call `hub.getQuotes()`. No HTTP layer needed.
 - **Provider author**: start from the provider contract in `@ongkirhub/core` and use the provider authoring docs plus `mock` or `manual` as references.
 - **Embedded runtime consumer** (current alpha): import `@ongkirhub/runtime` directly, build a hub with provider instances, and call `hub.getQuotes()` without a web server.
 
@@ -282,6 +283,19 @@ pnpm start
 
 It demonstrates `createOngkirHub()` with local providers (`mock` + `manual`), calling `hub.getQuotes()` directly with no HTTP server.
 
+### React server-side runtime example
+
+A minimal server-rendered React example lives in `examples/react-server-runtime`:
+
+```bash
+cd examples/react-server-runtime
+pnpm start
+```
+
+It demonstrates importing `@ongkirhub/runtime` directly in a server-side React script, fetching quotes, and rendering them with `react-dom/server`. No HTTP server or React hook package is involved.
+
+This is the intended runtime-first React path for server environments (Next.js RSC, Remix loaders, etc.).
+
 ### React browser demo
 
 A tiny Vite-based React demo lives in `examples/react-demo`:
@@ -292,6 +306,8 @@ npx vite
 ```
 
 The dev server proxies API requests to `localhost:3000`, so the demo stays same-origin during local development. It demonstrates `OngkirHubProvider`, `useShippingQuotes()`, and observable loading/success/error states with known-good sample routes.
+
+This is the browser React path. Browser apps cannot access `@ongkirhub/runtime` directly and must use the HTTP API via `@ongkirhub/react`.
 
 ### React Google Maps location-selection demo
 
