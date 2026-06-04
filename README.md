@@ -2,14 +2,26 @@
 
 Use one quote API contract even when shipping providers use different location IDs, payloads, and response formats.
 
-OngkirHub is an open-source shipping integration framework for teams that want to integrate multiple logistics providers without rewriting their application for each one. It provides a shared provider contract, an HTTP API, a TypeScript client, and React hooks on top of real provider integrations.
+OngkirHub is an open-source shipping integration framework for teams that want to integrate multiple logistics providers without rewriting their application for each one. Its primary asset is the **provider contract** — a shared interface for quote execution, location normalization, and structured errors.
+
+Current shipped path (today):
 
 ```text
-Your application
+Browser / frontend
   ↓
 @ongkirhub/client or @ongkirhub/react
   ↓
-@ongkirhub/api
+@ongkirhub/api  (optional HTTP adapter)
+  ↓
+Providers
+```
+
+Planned embedded runtime path (future direction):
+
+```text
+Application
+  ↓
+@ongkirhub/runtime
   ↓
 Providers
   ├── RajaOngkir
@@ -124,9 +136,10 @@ If you want a real provider next, enable RajaOngkir or Biteship below.
 
 ## Common adoption paths
 
-- **Backend/API consumer**: run `@ongkirhub/api`, enable one or more providers, and call `/v0/quotes`.
-- **TypeScript or frontend app developer**: start with `@ongkirhub/client`, then use `@ongkirhub/react` for React apps.
+- **Backend/API consumer** (current recommended path): run `@ongkirhub/api` as an HTTP server, enable one or more providers, and call `/v0/quotes`.
+- **TypeScript or frontend app developer**: start with `@ongkirhub/client` against the HTTP API, then use `@ongkirhub/react` for React apps.
 - **Provider author**: start from the provider contract in `@ongkirhub/core` and use the provider authoring docs plus `mock` or `manual` as references.
+- **Future embedded runtime consumer**: planned direction via `@ongkirhub/runtime`, not yet implemented.
 
 ## Real provider setup
 
@@ -227,7 +240,7 @@ export BITESHIP_DEBUG=1
 | Package | Purpose |
 | --- | --- |
 | `@ongkirhub/core` | Domain types, provider contract, validation, errors |
-| `@ongkirhub/api` | Publishable HTTP API and provider registry composition |
+| `@ongkirhub/api` | Optional HTTP API adapter and server reference deployment |
 | `@ongkirhub/client` | Framework-agnostic TypeScript client for the OngkirHub API |
 | `@ongkirhub/react` | Headless React hooks and provider for the OngkirHub client |
 | `@ongkirhub/provider-mock` | Deterministic development provider |

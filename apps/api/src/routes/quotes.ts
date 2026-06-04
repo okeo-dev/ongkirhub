@@ -1,17 +1,12 @@
-import {
-  isProviderError,
-  validateQuoteRequest,
-  type Quote,
-  type ShippingProvider,
-} from "@ongkirhub/core";
+import { isProviderError, validateQuoteRequest } from "@ongkirhub/core";
+import type { OngkirHub } from "@ongkirhub/runtime";
 import type { Hono } from "hono";
-import { resolveProviders } from "../registry/providers.js";
 import { quoteRequestSchema } from "../schemas/quote-request.js";
 import type { QuotesResponseBody } from "../schemas/quote-response.js";
 
 export function registerQuotesRoute(
   app: Hono,
-  registry: Map<string, ShippingProvider>,
+  hub: OngkirHub,
 ): void {
   app.post("/v0/quotes", async (context) => {
     let body: unknown;
@@ -34,22 +29,6 @@ export function registerQuotesRoute(
 
     const { providers: requestedProviders, ...shipment } = parsed.data;
 
-    let selectedProviders: ShippingProvider[];
-    try {
-      selectedProviders = resolveProviders(registry, requestedProviders);
-    } catch (error) {
-      return context.json(
-        {
-          error: error instanceof Error ? error.message : "Invalid providers",
-        },
-        400,
-      );
-    }
-
-    if (selectedProviders.length === 0) {
-      return context.json({ error: "No providers configured" }, 503);
-    }
-
     let quoteRequest;
     try {
       quoteRequest = validateQuoteRequest(shipment);
@@ -60,48 +39,56 @@ export function registerQuotesRoute(
       throw error;
     }
 
-    const quotes: Quote[] = [];
+    const providerKeys = requestedProviders
+      ? Array.isArray(requestedProviders)
+        ? requestedProviders
+        : [requestedProviders]
+      : undefined;
 
-    for (const provider of selectedProviders) {
-      try {
-        const providerQuotes = await provider.getQuotes(quoteRequest);
-        quotes.push(...providerQuotes);
-      } catch (error) {
-        if (isProviderError(error)) {
-          return context.json(
-            {
-              error: error.message,
-              code: error.code,
-              providerKey: error.providerKey ?? provider.key,
-            },
-            502,
-          );
-        }
-        throw error;
+    try {
+      const result = await hub.getQuotes(quoteRequest, {
+        providers: providerKeys,
+      });
+
+      const response: QuotesResponseBody = {
+        quotes: result.quotes,
+        providers: result.providers,
+        requestSummary: {
+          origin: quoteRequest.origin,
+          destination: quoteRequest.destination,
+        },
+        ...(result.debug ? { debug: result.debug } : {}),
+      };
+
+      return context.json(response);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("Unknown provider:")) {
+        return context.json({ error: error.message }, 400);
       }
-    }
 
-    const debug: Record<string, object> = {};
-    for (const provider of selectedProviders) {
-      const maybeDebug = (provider as unknown as Record<string, unknown>).getDebugInfo;
-      if (typeof maybeDebug === "function") {
-        const info = (maybeDebug as () => object)();
-        if (info && Object.keys(info).length > 0) {
-          debug[provider.key] = info;
-        }
+      if (
+        isProviderError(error) &&
+        error.code === "INVALID_REQUEST" &&
+        error.message === "No providers configured"
+      ) {
+        return context.json(
+          { error: error.message, code: error.code },
+          503,
+        );
       }
+
+      if (isProviderError(error)) {
+        return context.json(
+          {
+            error: error.message,
+            code: error.code,
+            providerKey: error.providerKey,
+          },
+          502,
+        );
+      }
+
+      throw error;
     }
-
-    const response: QuotesResponseBody = {
-      quotes,
-      providers: selectedProviders.map((provider) => provider.key),
-      requestSummary: {
-        origin: quoteRequest.origin,
-        destination: quoteRequest.destination,
-      },
-      ...(Object.keys(debug).length > 0 ? { debug } : {}),
-    };
-
-    return context.json(response);
   });
 }

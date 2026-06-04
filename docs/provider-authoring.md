@@ -54,9 +54,11 @@ await assertProviderConformance(createAcmeProvider());
 
 Load secrets and upstream credentials in your app composition layer, not inside `getQuotes` contract code. Pass configured clients or rate tables into your provider factory (see `@ongkirhub/provider-manual`).
 
-## Registering in the API app
+## Registering in the orchestration layer
 
-Add your built provider to `apps/api/src/registry/providers.ts` and include its key in `ENABLED_PROVIDERS`.
+**Current (v0.1):** add your built provider to `apps/api/src/registry/providers.ts` and include its key in `ENABLED_PROVIDERS`.
+
+**Future direction:** registration moves to `@ongkirhub/runtime`, making provider orchestration usable without a web server.
 
 ## Location mappings (real providers)
 

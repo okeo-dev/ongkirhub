@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { createOngkirHub } from "@ongkirhub/runtime";
 import { createApp } from "../src/app.js";
 import { loadEnv } from "../src/config/env.js";
 import { createProviderRegistry } from "../src/registry/providers.js";
@@ -507,5 +508,28 @@ describe("quotes API", () => {
     });
 
     expect(response.status).toBe(400);
+  });
+
+  it("returns 503 when no providers are configured", async () => {
+    const emptyHub = createOngkirHub({ providers: [] });
+    const emptyApp = createApp({ env, hub: emptyHub, version: "test" });
+
+    const response = await emptyApp.request("/v0/quotes", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        origin: validOrigin,
+        destination: validDestination,
+        parcels: [{ weightGrams: 1000 }],
+        totalWeightGrams: 1000,
+      }),
+    });
+
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      error: "No providers configured",
+      code: "INVALID_REQUEST",
+    });
   });
 });

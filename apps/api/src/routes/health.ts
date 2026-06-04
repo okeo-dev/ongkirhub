@@ -1,19 +1,18 @@
-import type { ShippingProvider } from "@ongkirhub/core";
+import type { OngkirHub } from "@ongkirhub/runtime";
 import type { Hono } from "hono";
-import { listProviderKeys } from "../registry/providers.js";
 
 export function registerHealthRoute(
   app: Hono,
   options: {
     version: string;
-    registry: Map<string, ShippingProvider>;
+    hub: OngkirHub;
   },
 ): void {
   app.get("/health", (context) => {
+    const health = options.hub.getHealth();
     return context.json({
-      status: "ok",
+      ...health,
       version: options.version,
-      providers: listProviderKeys(options.registry),
     });
   });
 }

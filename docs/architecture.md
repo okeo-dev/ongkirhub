@@ -4,20 +4,41 @@ OngkirHub v0.1 is a pnpm monorepo with strict package boundaries.
 
 ## Layers
 
+Current shipped path (v0.1):
+
 ```text
 HTTP (@ongkirhub/api)
   -> validates requests
   -> selects registered providers
   -> aggregates normalized quotes
 
-Providers (@ongkirhub/provider-*)
-  -> implement ShippingProvider
-  -> depend on @ongkirhub/core only
-
 Core (@ongkirhub/core)
   -> domain types and provider contract
   -> location input contract, normalization, resolver algorithm, shared LOCATION_* errors
   -> no HTTP, persistence, provider SDK code, or mapping datasets
+
+Providers (@ongkirhub/provider-*)
+  -> implement ShippingProvider
+  -> depend on @ongkirhub/core only
+```
+
+Future direction:
+
+```text
+Core (@ongkirhub/core)
+  -> domain types and provider contract
+  -> location input contract, normalization, resolver algorithm, shared LOCATION_* errors
+  -> no HTTP, persistence, provider SDK code, or mapping datasets
+
+Runtime (future: @ongkirhub/runtime)
+  -> provider registry construction
+  -> quote orchestration across providers
+  -> health reporting
+
+HTTP (@ongkirhub/api)
+  -> optional HTTP adapter over runtime
+  -> validates requests
+  -> maps responses to HTTP status codes
 ```
 
 ## Product boundary
@@ -105,9 +126,13 @@ Forbidden:
 
 ## Provider registration
 
-Registration is explicit in `apps/api/src/registry/providers.ts`. There is no auto-discovery or side-effect imports in `core`.
+Registration is explicit. There is no auto-discovery or side-effect imports in `core`.
 
-Enable providers with `ENABLED_PROVIDERS=mock,manual` (default). To add RajaOngkir, include `rajaongkir` and set `RAJAONGKIR_API_KEY` plus `RAJAONGKIR_COURIERS` in the API process environment. The API composes `createRajaOngkirProvider` with compiled `RAJAONGKIR_LOCATION_RECORDS` from `@ongkirhub/provider-rajaongkir`; provider-specific env parsing now lives in each provider package, while `apps/api` remains the orchestration layer that decides which providers are enabled.
+**Current (v0.1):** registration happens in `apps/api/src/registry/providers.ts`, which is the HTTP adapter's orchestration layer.
+
+**Future direction:** registration moves to `@ongkirhub/runtime`, making provider orchestration usable without a web server.
+
+Enable providers with `ENABLED_PROVIDERS=mock,manual` (default). To add RajaOngkir, include `rajaongkir` and set `RAJAONGKIR_API_KEY` plus `RAJAONGKIR_COURIERS` in the API process environment. The API composes `createRajaOngkirProvider` with compiled `RAJAONGKIR_LOCATION_RECORDS` from `@ongkirhub/provider-rajaongkir`; provider-specific env parsing now lives in each provider package, while the orchestration layer decides which providers are enabled.
 
 ## Design constraints for v0.1
 
