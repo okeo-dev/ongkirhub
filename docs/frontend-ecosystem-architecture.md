@@ -4,6 +4,8 @@
 **Scope:** Review proposed frontend packages and define implementation brief  
 **Constraint:** No code changes in this review.
 
+> Note: this document was written during the HTTP-first frontend package planning phase. Current OngkirHub product direction is runtime-first: `@ongkirhub/runtime` is the primary orchestration surface, while `@ongkirhub/client` and `@ongkirhub/react-api` are optional HTTP/browser adapter packages.
+
 ---
 
 ## Decision Summary
@@ -11,10 +13,10 @@
 | Question | Decision |
 |----------|----------|
 | Should `@ongkirhub/client` exist? | **Yes.** It is the single frontend transport and request-normalization layer. |
-| Should `@ongkirhub/react` depend on `@ongkirhub/client`? | **Yes.** React consumes the client; it does not duplicate request logic. |
-| Should `@ongkirhub/widget` depend on `@ongkirhub/react`? | **No.** Widget depends on `@ongkirhub/client` directly to avoid framework lock-in and unnecessary bundle weight. |
+| Should `@ongkirhub/react-api` depend on `@ongkirhub/client`? | **Yes.** React consumes the client; it does not duplicate request logic. |
+| Should `@ongkirhub/widget` depend on `@ongkirhub/react-api`? | **No.** Widget depends on `@ongkirhub/client` directly to avoid framework lock-in and unnecessary bundle weight. |
 | Should these packages live in the monorepo? | **Yes.** |
-| v0.1 scope | Build `@ongkirhub/client` first, then headless `@ongkirhub/react`. Defer `@ongkirhub/widget`. |
+| v0.1 scope | Build `@ongkirhub/client` first, then headless `@ongkirhub/react-api`. Defer `@ongkirhub/widget`. |
 
 ---
 
@@ -29,14 +31,14 @@ providers
   ↓
 @ongkirhub/client           ← first build
   ↓              ↓
-@ongkirhub/react      @ongkirhub/widget    ← react second, widget deferred
+@ongkirhub/react-api  @ongkirhub/widget    ← react second, widget deferred
 ```
 
 **Dependency rule:**
 
-- `@ongkirhub/react` → `@ongkirhub/client`
+- `@ongkirhub/react-api` → `@ongkirhub/client`
 - `@ongkirhub/widget` → `@ongkirhub/client`
-- **No** `@ongkirhub/widget` → `@ongkirhub/react` edge
+- **No** `@ongkirhub/widget` → `@ongkirhub/react-api` edge
 
 ## Boundary guardrail
 
@@ -111,7 +113,7 @@ export type { QuoteRequestBody, QuotesResponseBody, Quote, ProviderErrorCode };
 - Retry policy implementation
 - Internal fetch wrapper
 
-### `@ongkirhub/react`
+### `@ongkirhub/react-api`
 
 | Responsibility | Owner |
 |----------------|-------|
@@ -186,9 +188,9 @@ The widget internally creates and owns its `OngkirHubClient` instance from `apiU
 
 ---
 
-## Why `@ongkirhub/widget` Should Not Depend on `@ongkirhub/react`
+## Why `@ongkirhub/widget` Should Not Depend on `@ongkirhub/react-api`
 
-**Recommendation:** `@ongkirhub/widget` → `@ongkirhub/client`, not `@ongkirhub/react`.
+**Recommendation:** `@ongkirhub/widget` → `@ongkirhub/client`, not `@ongkirhub/react-api`.
 
 | Concern | `widget → react` | `widget → client` |
 |---------|------------------|-------------------|
@@ -217,7 +219,7 @@ The widget internally creates and owns its `OngkirHubClient` instance from `apiU
 | Retry policy internals | **Internal** |
 | Cache key format | **Internal** |
 
-### `@ongkirhub/react`
+### `@ongkirhub/react-api`
 
 | Symbol | Visibility |
 |--------|------------|
@@ -267,7 +269,7 @@ The widget internally creates and owns its `OngkirHubClient` instance from `apiU
 - Subscription/WebSocket support
 - Provider-specific client extensions
 
-### Workstream 2: `@ongkirhub/react`
+### Workstream 2: `@ongkirhub/react-api`
 
 **Scope:**
 
@@ -313,7 +315,7 @@ The widget internally creates and owns its `OngkirHubClient` instance from `apiU
 | Package | Build Tool | Output |
 |---------|------------|--------|
 | `@ongkirhub/client` | `tsc` | ESM + `.d.ts` |
-| `@ongkirhub/react` | `tsc` | ESM + `.d.ts` |
+| `@ongkirhub/react-api` | `tsc` | ESM + `.d.ts` |
 | `@ongkirhub/widget` | `tsc` + `esbuild` or `rollup` (deferred) | ESM + IIFE bundle for CDN drop-in |
 
 **Rationale:**
@@ -359,7 +361,7 @@ These are client-layer concerns, not React or Widget concerns. The React hook si
 
 1. **Do not build a generic HTTP client** — The client is OngkirHub-specific. It knows the `/v0/quotes` endpoint shape.
 2. **Do not integrate TanStack Query / SWR yet** — The React hook can use `useEffect` + `useState` in v0.1. External query libraries are a future optimization.
-3. **Do not ship styled UI components in `@ongkirhub/react`** — React package is headless in v0.1. UI is widget territory.
+3. **Do not ship styled UI components in `@ongkirhub/react-api`** — React package is headless in v0.1. UI is widget territory.
 4. **Do not support SSR in v0.1** — Widget and React hooks assume browser environment. SSR support is a future workstream.
 
 ---
@@ -374,7 +376,7 @@ Phase 1: @ongkirhub/client
   ├─ Implement error normalization
   └─ Write unit tests with mock fetch
 
-Phase 2: @ongkirhub/react
+Phase 2: @ongkirhub/react-api
   ├─ Implement OngkirHubProvider
   ├─ Implement useOngkirHubClient()
   ├─ Implement useShippingQuotes()

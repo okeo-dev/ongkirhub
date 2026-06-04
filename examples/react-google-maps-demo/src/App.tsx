@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useShippingQuotes } from "@ongkirhub/react";
+import { useShippingQuotes } from "@ongkirhub/react-api";
 import type { LocationMethodInput, QuoteRequest } from "@ongkirhub/client";
 import { loadGoogleMaps, attachAutocomplete, type NormalizedPlace } from "./google.js";
 

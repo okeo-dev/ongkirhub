@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@ongkirhub/client": "workspace:*",
-    "@ongkirhub/react": "workspace:*",
+    "@ongkirhub/react-api": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

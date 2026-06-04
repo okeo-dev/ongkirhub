@@ -6,20 +6,7 @@ OngkirHub is an open-source shipping integration framework for teams that want t
 
 Current shipped paths (v0.1 alpha):
 
-**HTTP path:**
-```text
-Browser / frontend
-  ↓
-@ongkirhub/client or @ongkirhub/react
-  ↓
-@ongkirhub/api  (optional HTTP adapter)
-  ↓
-@ongkirhub/runtime
-  ↓
-Providers
-```
-
-**Embedded runtime path (current alpha):**
+**Primary path: embedded runtime**
 ```text
 Application
   ↓
@@ -30,6 +17,19 @@ Providers
   ├── Biteship
   ├── Mock
   └── Manual
+```
+
+**Optional HTTP adapter path:**
+```text
+Browser / frontend
+  ↓
+@ongkirhub/client or @ongkirhub/react-api
+  ↓
+@ongkirhub/api
+  ↓
+@ongkirhub/runtime
+  ↓
+Providers
 ```
 
 OngkirHub owns quote execution, normalization, and structured quote errors. It does **not** aim to become an address-entry, checkout, or location-refinement platform.
@@ -49,9 +49,11 @@ Included:
 
 - normalized **rates and ETA** quotes
 - `@ongkirhub/core` provider contract
-- `@ongkirhub/api` HTTP server (`GET /health`, `POST /v0/quotes`)
+- `@ongkirhub/runtime` embedded orchestration layer
+- `@ongkirhub/api` optional HTTP server (`GET /health`, `POST /v0/quotes`)
 - `@ongkirhub/client` TypeScript SDK
-- `@ongkirhub/react` headless React integration
+- `@ongkirhub/react` runtime-oriented React integration
+- `@ongkirhub/react-api` headless React integration
 - implemented providers:
   - `mock`
   - `manual`
@@ -78,16 +80,28 @@ Not included yet:
 
 Requirements: Node.js 20+, pnpm 9.
 
-Install and run:
+Install:
 
 ```bash
 pnpm install
+```
+
+Then run the primary embedded-runtime smoke example:
+
+```bash
+cd examples/runtime-smoke
+pnpm start
+```
+
+This is the shortest path to a successful quote with no HTTP server, no provider credentials, and no extra deployment boundary.
+
+If you specifically want to evaluate the optional HTTP adapter, run:
+
+```bash
 pnpm dev
 ```
 
-The API listens on `http://0.0.0.0:3000` by default.
-
-Then send a first successful quote request using the built-in `mock` and `manual` providers:
+The API listens on `http://0.0.0.0:3000` by default. Then send a first successful quote request using the built-in `mock` and `manual` providers:
 
 ```bash
 curl -s http://localhost:3000/v0/quotes \
@@ -138,11 +152,12 @@ If you want a real provider next, enable RajaOngkir or Biteship below.
 
 ## Common adoption paths
 
-- **Backend/API consumer** (current recommended path): run `@ongkirhub/api` as an HTTP server, enable one or more providers, and call `/v0/quotes`.
-- **Browser React app**: use `@ongkirhub/react` with the HTTP API. Browser apps cannot bundle provider SDKs or secrets.
-- **Server-side React app** (Next.js RSC, Remix, etc.): import `@ongkirhub/runtime` directly in server code and call `hub.getQuotes()`. No HTTP layer needed.
+- **Embedded runtime consumer** (current recommended path): import `@ongkirhub/runtime` directly, build a hub with provider instances, and call `hub.getQuotes()` without a web server.
+- **Backend/API consumer**: run `@ongkirhub/api` as an optional HTTP adapter, enable one or more providers, and call `/v0/quotes`.
+- **Browser React app**: use `@ongkirhub/react-api` with the HTTP API. Browser apps cannot bundle provider SDKs or secrets.
+- **Server-side React app** (Next.js RSC, Remix, etc.): import `@ongkirhub/runtime` directly in server code and call `hub.getQuotes()`. No HTTP layer needed. Alternatively, use `@ongkirhub/react` with a hub constructed server-side.
+- **Browser runtime demo/evaluation**: `@ongkirhub/react` can be used in the browser for development demos with explicit provider API key input. This is **not production-safe**.
 - **Provider author**: start from the provider contract in `@ongkirhub/core` and use the provider authoring docs plus `mock` or `manual` as references.
-- **Embedded runtime consumer** (current alpha): import `@ongkirhub/runtime` directly, build a hub with provider instances, and call `hub.getQuotes()` without a web server.
 
 ## Real provider setup
 
@@ -246,7 +261,8 @@ export BITESHIP_DEBUG=1
 | `@ongkirhub/runtime` | Provider orchestration, quote aggregation, health (current alpha) |
 | `@ongkirhub/api` | Optional HTTP API adapter over runtime |
 | `@ongkirhub/client` | Framework-agnostic TypeScript client for the OngkirHub API |
-| `@ongkirhub/react` | Headless React hooks and provider for the OngkirHub client |
+| `@ongkirhub/react` | Runtime-oriented React provider and hooks |
+| `@ongkirhub/react-api` | HTTP-oriented React hooks and provider for the OngkirHub client |
 | `@ongkirhub/provider-mock` | Deterministic development provider |
 | `@ongkirhub/provider-manual` | Configurable static-rate provider |
 | `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic and international rates |
@@ -256,10 +272,13 @@ export BITESHIP_DEBUG=1
 Dependency direction:
 
 - `@ongkirhub/client` depends on `@ongkirhub/core`
-- `@ongkirhub/react` depends on `@ongkirhub/client` and `@ongkirhub/core`
+- `@ongkirhub/react` depends on `@ongkirhub/runtime` and `@ongkirhub/core`
+- `@ongkirhub/react-api` depends on `@ongkirhub/client` and `@ongkirhub/core`
 - providers depend on `@ongkirhub/core` only, never on `@ongkirhub/api`
 
 ## Examples
+
+The examples are listed from the primary runtime-first path to the optional HTTP/browser adapter path.
 
 ### Client smoke example
 
@@ -307,7 +326,18 @@ npx vite
 
 The dev server proxies API requests to `localhost:3000`, so the demo stays same-origin during local development. It demonstrates `OngkirHubProvider`, `useShippingQuotes()`, and observable loading/success/error states with known-good sample routes.
 
-This is the browser React path. Browser apps cannot access `@ongkirhub/runtime` directly and must use the HTTP API via `@ongkirhub/react`.
+This is the browser React path. Browser apps cannot access `@ongkirhub/runtime` directly and must use the HTTP API via `@ongkirhub/react-api`.
+
+### React runtime browser demo
+
+A browser-testable runtime demo lives in `examples/react-runtime-demo`:
+
+```bash
+cd examples/react-runtime-demo
+npx vite
+```
+
+It demonstrates `@ongkirhub/react` with providers constructed directly in the browser. **This is demo-only and not production-safe** — API keys are entered in the browser and exposed to the client. It is useful for evaluating provider behavior without a backend.
 
 ### React Google Maps location-selection demo
 
@@ -318,17 +348,28 @@ cd examples/react-google-maps-demo
 npx vite
 ```
 
-It uses Google Places Autocomplete to let users pick origin and destination addresses, normalizes the selected places into OngkirHub `LocationInput`, and fetches quotes via `@ongkirhub/react`. It is useful for exploring location-selection UX, not as a final merchant-ready flow.
+It uses Google Places Autocomplete to let users pick origin and destination addresses, normalizes the selected places into OngkirHub `LocationInput`, and fetches quotes via `@ongkirhub/react-api`. It is useful for exploring location-selection UX, not as a final merchant-ready flow.
 
 This demo is a reference/example integration only. It does not define an official OngkirHub frontend location strategy.
+
+### React Google Maps runtime demo
+
+A runtime-oriented variant lives in `examples/react-google-maps-runtime-demo`:
+
+```bash
+cd examples/react-google-maps-runtime-demo
+npx vite
+```
+
+It combines Google Places Autocomplete with `@ongkirhub/react` running providers directly in the browser. **Demo-only and not production-safe** — provider API keys are entered in the browser.
 
 ## Onboarding notes
 
 If you are evaluating OngkirHub for adoption:
 
-1. start with `mock` + `manual` to validate the API contract
-2. enable RajaOngkir or Biteship to validate a real provider path
-3. use `examples/client-smoke` or `examples/react-demo` to evaluate developer experience
+1. start with `examples/runtime-smoke` to validate the embedded runtime contract
+2. enable RajaOngkir or Biteship in runtime or API mode to validate a real provider path
+3. use `examples/client-smoke` or `examples/react-demo` only if you specifically want to evaluate the optional HTTP/browser adapter path
 4. read provider-specific limits before assuming all providers support the same routes or location inputs
 
 ## Project status

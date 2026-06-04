@@ -1,7 +1,7 @@
 {
-  "name": "@ongkirhub/react",
+  "name": "@ongkirhub/react-api",
   "version": "0.1.0",
-  "description": "Runtime-oriented React integration for OngkirHub",
+  "description": "Headless React hooks and provider for OngkirHub",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,8 +20,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@ongkirhub/core": "workspace:*",
-    "@ongkirhub/runtime": "workspace:*"
+    "@ongkirhub/client": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=18.0.0"

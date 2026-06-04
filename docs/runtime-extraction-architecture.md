@@ -136,7 +136,7 @@ const health = await hub.getHealth();
 | `@ongkirhub/runtime` | **New package.** Extracted from `apps/api`. |
 | `apps/api` / `@ongkirhub/api` | Becomes a thin HTTP adapter. Imports from `@ongkirhub/runtime`. Reduces its public surface. |
 | `@ongkirhub/client` | None. Still calls HTTP endpoints exposed by `apps/api`. |
-| `@ongkirhub/react` | None. Still uses `@ongkirhub/client`. |
+| `@ongkirhub/react-api` | None. Still uses `@ongkirhub/client`. |
 | `@ongkirhub/widget` | None. Still uses `@ongkirhub/client`. |
 | Examples | Can optionally use `@ongkirhub/runtime` directly for serverless or script-based use cases. |
 

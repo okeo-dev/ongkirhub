@@ -2,9 +2,9 @@
 
 ## Context
 
-OngkirHub has committed to a **framework-first, API-second** direction. `@ongkirhub/runtime` now exists as a shipped alpha surface, but the React package (`@ongkirhub/react`) was built during the earlier HTTP-first phase and still assumes an HTTP/client boundary.
+OngkirHub has committed to a **framework-first, API-second** direction. `@ongkirhub/runtime` now exists as a shipped alpha surface, and `@ongkirhub/react` has been implemented as a runtime-oriented React package. The HTTP-oriented React package (`@ongkirhub/react-api`, formerly `@ongkirhub/react`) was built during the earlier HTTP-first phase and still assumes an HTTP/client boundary.
 
-This brief evaluates whether a runtime-oriented React package is justified, distinguishes server-only runtime usage from client-style React usage, and decides whether the current package should be renamed.
+This brief documents the current React package landscape: when to use `@ongkirhub/react` (runtime-oriented) vs `@ongkirhub/react-api` (HTTP-oriented), and what boundaries each package respects.
 
 ---
 
@@ -77,7 +77,7 @@ Server Components, loaders, and server actions should import `@ongkirhub/runtime
 
 ### For browser React: not possible
 
-The browser cannot execute providers (API secrets, Node.js SDKs, provider-specific dependencies). Browser React must continue to use the HTTP path: `@ongkirhub/client` + `@ongkirhub/react`.
+The browser cannot execute providers (API secrets, Node.js SDKs, provider-specific dependencies). Browser React must continue to use the HTTP path: `@ongkirhub/client` + `@ongkirhub/react-api`.
 
 ### For Electron / desktop: niche, defer
 
@@ -87,38 +87,39 @@ A Provider + hook around `OngkirHub` could make sense in a desktop app where the
 - Most Electron apps use IPC to call the main process anyway
 - No current demand or validated need
 
-**Recommendation:** Defer a dedicated runtime-oriented React package. The correct runtime + React story today is "import `@ongkirhub/runtime` directly in your server code."
+**Recommendation:** `@ongkirhub/react` now exists for runtime-oriented React usage. It is currently positioned for alpha/demo/server-side usage where the React app has direct access to the runtime. The correct server-side path is still to import `@ongkirhub/runtime` directly when a React wrapper is unnecessary.
 
 ---
 
 ## 4. What the current React package actually is
 
-`@ongkirhub/react` today is an **HTTP-oriented React integration**. It depends on `@ongkirhub/client`, which makes `fetch` calls to an HTTP API. That is the correct and only viable pattern for browser React.
+`@ongkirhub/react-api` is an **HTTP-oriented React integration**. It depends on `@ongkirhub/client`, which makes `fetch` calls to an HTTP API. That is the correct and only viable pattern for browser React.
 
-The package name `@ongkirhub/react` is therefore **accurate for its purpose**. It does not need a "runtime" qualifier because the only React integration that ships today is the HTTP one.
+`@ongkirhub/react` now exists as a runtime-oriented React package. It provides `OngkirHubProvider`, `useOngkirHub()`, and `useShippingQuotes()` for environments where the React renderer has direct access to the runtime hub.
 
 ---
 
 ## 5. Rename recommendation
 
-**Do not rename now.**
+**The rename has already happened.**
 
-The original brief recommended renaming `@ongkirhub/react` → `@ongkirhub/react-api` and creating a new runtime-oriented `@ongkirhub/react`. That recommendation was premature because:
+`@ongkirhub/react` was renamed to `@ongkirhub/react-api`, and a new runtime-oriented `@ongkirhub/react` was created to align package discovery with the runtime-first architecture.
 
-1. The runtime React model is not yet justified (see §3)
-2. Renaming the current package would break early adopters for a surface that does not yet exist
-3. `@ongkirhub/react` accurately describes the HTTP-oriented package that is the primary React integration today
+That means the current state is:
 
-### If a runtime React package is needed later
+- `@ongkirhub/react-api` -> HTTP/browser-safe React integration
+- `@ongkirhub/react` -> runtime-oriented React integration (alpha, for server-side and demo usage)
 
-If Electron/desktop demand validates Model B, the naming path would be:
+### Current naming state
+
+The naming path is now:
 
 ```text
-@ongkirhub/react              -> stays as HTTP-oriented (current)
-@ongkirhub/react-runtime      -> new runtime-oriented package (future)
+@ongkirhub/react-api          -> HTTP-oriented (current)
+@ongkirhub/react              -> runtime-oriented (current, alpha)
 ```
 
-This avoids renaming the existing package and makes the new package's purpose explicit.
+This completed the rename and makes each package's purpose explicit.
 
 ---
 
@@ -133,18 +134,19 @@ Make it obvious that server-side React should use `@ongkirhub/runtime` directly.
 import { createOngkirHub } from "@ongkirhub/runtime";
 ```
 
-### Keep `@ongkirhub/react` as-is
+### Keep `@ongkirhub/react-api` as the HTTP React path
 
-The current package is correctly positioned as the HTTP-oriented React integration. No rename. No new package.
+`@ongkirhub/react-api` is correctly positioned as the HTTP-oriented React integration. `@ongkirhub/react` is positioned as the runtime-oriented React integration.
 
 ### Future trigger for runtime React package
 
-Create `@ongkirhub/react-runtime` only when:
+`@ongkirhub/react` already exists. It is useful when:
 
-- A validated desktop (Electron/Tauri) integration demands it, **or**
-- A server-side React framework emerges where reactive hooks around runtime are genuinely useful
+- Building server-side React apps where a provider + hook abstraction over the runtime hub is convenient
+- Building browser demos that explicitly construct providers in the client (not production-safe)
+- Building Electron/Tauri apps where the renderer has direct Node.js access
 
-Until then, the server-side path is direct runtime usage.
+For pure server-side React (RSC, loaders), direct `@ongkirhub/runtime` import remains the simplest path.
 
 ---
 
@@ -163,15 +165,15 @@ Regardless of whether a runtime React package is created later, the existing pro
 
 | Risk | Mitigation |
 |------|-----------|
-| Users assume `@ongkirhub/react` should work with runtime | Document clearly: server React uses runtime directly; browser React uses the HTTP path |
+| Users assume `@ongkirhub/react` is production-safe in the browser | Document clearly: `@ongkirhub/react` requires runtime hub access; browser production apps should use `@ongkirhub/react-api` with a backend |
 | Framework-first messaging feels weak without a runtime React package | Direct runtime import in RSC is actually *more* framework-first than a wrapper package |
-| Future Electron demand | Create `@ongkirhub/react-runtime` then; name is already reserved conceptually |
+| Future Electron demand | `@ongkirhub/react` already supports this use case |
 
 ---
 
 ## Summary
 
-- **Server-side React:** Import `@ongkirhub/runtime` directly. No React package needed.
-- **Browser React:** Continue using `@ongkirhub/react` (HTTP-oriented). No changes.
-- **Runtime React package:** Not justified today. Defer until Electron/desktop demand validates it.
-- **Rename:** Do not rename `@ongkirhub/react`. It correctly names the HTTP-oriented React integration that is the primary surface today.
+- **Server-side React:** Import `@ongkirhub/runtime` directly, or use `@ongkirhub/react` when a provider/hook abstraction is convenient.
+- **Browser React (production):** Use `@ongkirhub/react-api` (HTTP-oriented) with a backend server.
+- **Browser React (demo/evaluation):** `@ongkirhub/react` can be used for browser demos with explicit provider API key input. This is **not production-safe**.
+- **Rename:** completed. `@ongkirhub/react-api` is the HTTP package; `@ongkirhub/react` is the runtime package.

@@ -1,15 +1,15 @@
 import type { ReactNode } from "react";
-import type { OngkirHub } from "@ongkirhub/runtime";
 import { OngkirHubContext } from "./context.js";
+import type { OngkirHubClient } from "@ongkirhub/client";
 
 export interface OngkirHubProviderProps {
-  hub: OngkirHub;
+  client: OngkirHubClient;
   children: ReactNode;
 }
 
-export function OngkirHubProvider({ hub, children }: OngkirHubProviderProps): ReactNode {
+export function OngkirHubProvider({ client, children }: OngkirHubProviderProps): ReactNode {
   return (
-    <OngkirHubContext.Provider value={hub}>
+    <OngkirHubContext.Provider value={client}>
       {children}
     </OngkirHubContext.Provider>
   );

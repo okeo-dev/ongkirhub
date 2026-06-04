@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useShippingQuotes } from "@ongkirhub/react";
+import { useShippingQuotes } from "@ongkirhub/react-api";
 import type { QuoteRequest } from "@ongkirhub/client";
 
 const ROUTE_A: QuoteRequest = {

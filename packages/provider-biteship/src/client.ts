@@ -65,7 +65,8 @@ export class BiteshipClient {
   constructor(config: BiteshipClientConfig) {
     this.apiKey = config.apiKey;
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
-    this.fetchFn = config.fetchFn ?? fetch;
+    this.fetchFn =
+      config.fetchFn ?? ((input, init) => globalThis.fetch(input, init));
     this.debug = config.debug ?? false;
   }
 
