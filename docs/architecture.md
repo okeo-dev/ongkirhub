@@ -20,6 +20,42 @@ Core (@ongkirhub/core)
   -> no HTTP, persistence, provider SDK code, or mapping datasets
 ```
 
+## Product boundary
+
+OngkirHub stops at quote execution and structured quote failures.
+
+```text
+LocationInput + parcels
+  ↓
+quotes or structured errors
+```
+
+It does **not** own:
+
+- address forms
+- autocomplete
+- Google Maps or map selection
+- checkout UX
+- retry/remediation UX after location errors
+- provider-specific frontend refinement workflows
+
+Those are consuming-application concerns.
+
+Examples and demos may explore those flows, but they are not framework commitments.
+
+## Ownership
+
+| Concern | Owner |
+| --- | --- |
+| `LocationInput`, `QuoteRequest`, `Quote`, structured provider errors | OngkirHub |
+| provider orchestration and normalized quote execution | OngkirHub |
+| provider debug metadata | OngkirHub |
+| thin API/client/react request abstractions | OngkirHub |
+| address collection UX | consuming application |
+| autocomplete / Google Maps integration | consuming application |
+| location refinement UX and remediation flow | consuming application |
+| checkout-specific decisions | consuming application |
+
 ## Location resolution (frozen contract)
 
 OngkirHub does not maintain a global location registry or canonical location IDs. Callers send provider-neutral `LocationInput`; each provider resolves that input into its own internal IDs using provider-owned mappings and machinery defined in `core`.
@@ -71,7 +107,7 @@ Forbidden:
 
 Registration is explicit in `apps/api/src/registry/providers.ts`. There is no auto-discovery or side-effect imports in `core`.
 
-Enable providers with `ENABLED_PROVIDERS=mock,manual` (default). To add RajaOngkir, include `rajaongkir` and set `RAJAONGKIR_API_KEY` plus `RAJAONGKIR_COURIERS` in the API process environment. The API composes `createRajaOngkirProvider` with compiled `RAJAONGKIR_LOCATION_RECORDS` from `@ongkirhub/provider-rajaongkir`; secrets stay in `apps/api` config, not inside the provider package.
+Enable providers with `ENABLED_PROVIDERS=mock,manual` (default). To add RajaOngkir, include `rajaongkir` and set `RAJAONGKIR_API_KEY` plus `RAJAONGKIR_COURIERS` in the API process environment. The API composes `createRajaOngkirProvider` with compiled `RAJAONGKIR_LOCATION_RECORDS` from `@ongkirhub/provider-rajaongkir`; provider-specific env parsing now lives in each provider package, while `apps/api` remains the orchestration layer that decides which providers are enabled.
 
 ## Design constraints for v0.1
 

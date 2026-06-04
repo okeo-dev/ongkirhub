@@ -38,6 +38,25 @@ providers
 - `@ongkirhub/widget` → `@ongkirhub/client`
 - **No** `@ongkirhub/widget` → `@ongkirhub/react` edge
 
+## Boundary guardrail
+
+These frontend packages are intentionally thin.
+
+OngkirHub frontend packages should own:
+
+- typed request/response transport
+- loading/error/data state
+- request lifecycle helpers
+
+They should **not** own:
+
+- provider-aware frontend refinement strategies
+- Google-aware hooks
+- candidate-selection abstractions
+- checkout-specific remediation flows
+
+Those belong to consuming applications. Demos may show possible integrations, but demos do not define the framework boundary.
+
 ---
 
 ## Why `@ongkirhub/client` Should Exist
@@ -57,6 +76,8 @@ The client is **not** a thin wrapper. It owns:
 - Response parsing and normalization
 - Retry/timeout policy
 - Typed error mapping
+
+The client must **not** grow into address-entry or provider-remediation logic.
 
 ---
 
@@ -101,6 +122,7 @@ export type { QuoteRequestBody, QuotesResponseBody, Quote, ProviderErrorCode };
 | HTTP transport | ❌ Delegates to Client |
 | Request serialization | ❌ Delegates to Client |
 | Response normalization | ❌ Delegates to Client |
+| Provider-aware location refinement | ❌ Application concern |
 
 **Public API:**
 
@@ -128,6 +150,8 @@ export function useShippingQuotes(
 
 **Internal (not public):**
 - Internal state machines for loading/error/data
+
+The React package remains headless and request-oriented. It should not grow Google-aware hooks or provider-specific location-selection helpers.
 
 ### `@ongkirhub/widget`
 
@@ -280,6 +304,7 @@ The widget internally creates and owns its `OngkirHubClient` instance from `apiU
 
 - Widget UI is the most opinionated layer. It should wait until the client API is stable.
 - Widget requires design decisions (CSS framework, form validation, accessibility) that are best made after the data layer is proven.
+- Address-entry and refinement UX are application concerns today. Widget work should not force OngkirHub to formalize a checkout/location platform boundary.
 
 ---
 

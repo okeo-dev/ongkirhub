@@ -18,6 +18,8 @@ Providers
   └── Manual
 ```
 
+OngkirHub owns quote execution, normalization, and structured quote errors. It does **not** aim to become an address-entry, checkout, or location-refinement platform.
+
 ## Current status
 
 OngkirHub is currently **alpha**:
@@ -205,7 +207,7 @@ Providers do not all accept the same kind of location input:
 - RajaOngkir relies on hierarchy and provider-owned mapping data
 - Biteship currently relies on postal code lookup
 
-OngkirHub normalizes the request contract, but provider-compatible location refinement can still differ by provider. This is one of the main active product areas for frontend adoption flows.
+OngkirHub normalizes the request contract, but frontend address-entry and refinement UX still belong to the consuming application. OngkirHub stops at quote success or structured error; applications decide how to collect better location input, retry, or remediate provider-specific failures.
 
 ### Provider debug mode
 
@@ -273,6 +275,8 @@ npx vite
 ```
 
 It uses Google Places Autocomplete to let users pick origin and destination addresses, normalizes the selected places into OngkirHub `LocationInput`, and fetches quotes via `@ongkirhub/react`. It is useful for exploring location-selection UX, not as a final merchant-ready flow.
+
+This demo is a reference/example integration only. It does not define an official OngkirHub frontend location strategy.
 
 ## Onboarding notes
 

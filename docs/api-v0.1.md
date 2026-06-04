@@ -62,6 +62,8 @@ Frozen v0.1 contract: **location method only**. Origin and destination use the s
 | `LOCATION_RESOLVER_NOT_CONFIGURED` | Provider has no mapping/resolver wired |
 | `LOCATION_RESOLUTION_FAILED` | Resolver error other than not-found/ambiguous |
 
+These errors are the contract boundary. OngkirHub returns structured failure information; consuming applications decide how to collect a better location, retry, or present remediation UX.
+
 Parcel fields: weight in grams, optional dimensions (see `@ongkirhub/core`).
 
 ### Success response
