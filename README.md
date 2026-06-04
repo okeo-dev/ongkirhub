@@ -250,6 +250,7 @@ export BITESHIP_DEBUG=1
 | `@ongkirhub/provider-manual` | Configurable static-rate provider |
 | `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic and international rates |
 | `@ongkirhub/provider-biteship` | Biteship courier aggregator rates |
+| `@ongkirhub/location-google` | Google Places location normalization (optional) |
 
 Dependency direction:
 
@@ -269,6 +270,17 @@ ONGKIRHUB_API_URL=http://localhost:3000 npx tsx src/index.ts
 ```
 
 It demonstrates `getHealth()` and `getQuotes()` against a configurable API URL.
+
+### Runtime smoke example
+
+A minimal embedded-runtime example lives in `examples/runtime-smoke`:
+
+```bash
+cd examples/runtime-smoke
+pnpm start
+```
+
+It demonstrates `createOngkirHub()` with local providers (`mock` + `manual`), calling `hub.getQuotes()` directly with no HTTP server.
 
 ### React browser demo
 
