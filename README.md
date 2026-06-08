@@ -273,7 +273,7 @@ Dependency direction:
 
 - `@ongkirhub/client` depends on `@ongkirhub/core`
 - `@ongkirhub/react` depends on `@ongkirhub/runtime` and `@ongkirhub/core`
-- `@ongkirhub/react-api` depends on `@ongkirhub/client` and `@ongkirhub/core`
+- `@ongkirhub/react-api` depends on `@ongkirhub/client`
 - providers depend on `@ongkirhub/core` only, never on `@ongkirhub/api`
 
 ## Examples

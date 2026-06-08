@@ -4,9 +4,8 @@ import { mockProvider } from "@ongkirhub/provider-mock";
 import { defaultManualProvider } from "@ongkirhub/provider-manual";
 import { OngkirHubProvider, useOngkirHub } from "@ongkirhub/react";
 import type { ShippingProvider } from "@ongkirhub/core";
-import { createRajaOngkirProvider } from "../../../packages/provider-rajaongkir/dist/provider.js";
-import { RAJAONGKIR_LOCATION_RECORDS } from "../../../packages/provider-rajaongkir/dist/location/generated/locations.generated.js";
-import { createBiteshipProvider } from "../../../packages/provider-biteship/dist/provider.js";
+import { createRajaOngkirProvider, RAJAONGKIR_LOCATION_RECORDS } from "@ongkirhub/provider-rajaongkir";
+import { createBiteshipProvider } from "@ongkirhub/provider-biteship";
 
 function DemoWarning() {
   return (
@@ -148,7 +147,7 @@ function QuotePanel() {
           level1: "Jawa Timur",
           level2: "Surabaya",
           level3: "Gubeng",
-          level4: "Airlangga",
+          level4: "Gubeng",
         },
         parcels: [{ weightGrams: 1500 }],
         totalWeightGrams: 1500,

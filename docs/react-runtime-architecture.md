@@ -63,31 +63,27 @@ Characteristics:
 
 ---
 
-## 3. Is a runtime-oriented React package justified now?
+## 3. When is `@ongkirhub/react` the right choice?
 
-**No.**
+`@ongkirhub/react` **already exists** and is useful in specific scenarios. It is not the default path for most React apps.
 
-### For server-side React: not needed
+### For server-side React: usually not needed
 
-Server Components, loaders, and server actions should import `@ongkirhub/runtime` directly. A Provider + `useShippingQuotes` wrapper would be an unnecessary abstraction that:
+Server Components, loaders, and server actions should import `@ongkirhub/runtime` directly. A Provider + `useShippingQuotes` wrapper adds a client-side pattern (context, `useEffect`) to a server-side execution model where reactive state management is unnecessary. The correct server-side path is still `@ongkirhub/runtime` directly.
 
-- Adds a client-side pattern (context, `useEffect`) to a server-side execution model
-- Introduces reactive state management where none is needed
-- Creates confusion about whether the code runs on server or client
+`@ongkirhub/react` is convenient when:
+- A server-side React app wants a provider/hook abstraction over the runtime hub
+- The component tree already uses React context for dependency injection
 
-### For browser React: not possible
+### For browser React: not possible in production
 
-The browser cannot execute providers (API secrets, Node.js SDKs, provider-specific dependencies). Browser React must continue to use the HTTP path: `@ongkirhub/client` + `@ongkirhub/react-api`.
+The browser cannot execute providers (API secrets, Node.js SDKs, provider-specific dependencies). Browser React in production must continue to use the HTTP path: `@ongkirhub/client` + `@ongkirhub/react-api`.
 
-### For Electron / desktop: niche, defer
+Browser demos that explicitly construct providers in the client (with user-supplied API keys) can use `@ongkirhub/react`. This is **not production-safe** and is only for evaluation.
 
-A Provider + hook around `OngkirHub` could make sense in a desktop app where the React renderer has direct Node.js access. But:
+### For Electron / desktop: supported, niche
 
-- This is a narrow use case
-- Most Electron apps use IPC to call the main process anyway
-- No current demand or validated need
-
-**Recommendation:** `@ongkirhub/react` now exists for runtime-oriented React usage. It is currently positioned for alpha/demo/server-side usage where the React app has direct access to the runtime. The correct server-side path is still to import `@ongkirhub/runtime` directly when a React wrapper is unnecessary.
+A Provider + hook around `OngkirHub` makes sense in desktop apps where the React renderer has direct Node.js access. `@ongkirhub/react` already supports this use case, though it remains narrow.
 
 ---
 

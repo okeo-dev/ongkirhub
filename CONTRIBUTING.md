@@ -31,6 +31,6 @@ pnpm dev
 - Add or update tests for behavior changes.
 - Run `pnpm build`, `pnpm test`, and `pnpm typecheck` before opening a PR.
 - Add a changeset when publishing `@ongkirhub/*` packages (including `@ongkirhub/api`).
-- `ENABLED_PROVIDERS` must list valid provider keys (`mock`, `manual`, `rajaongkir`); typos fail at startup.
+- `ENABLED_PROVIDERS` must list valid provider keys (`mock`, `manual`, `rajaongkir`, `biteship`); typos fail at startup.
 
 See the PR template for the v0.1 scope checklist.

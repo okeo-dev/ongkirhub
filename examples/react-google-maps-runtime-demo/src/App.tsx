@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createOngkirHub } from "@ongkirhub/runtime";
 import { mockProvider } from "@ongkirhub/provider-mock";
 import { defaultManualProvider } from "@ongkirhub/provider-manual";
 import { OngkirHubProvider, useOngkirHub } from "@ongkirhub/react";
-import type { ShippingProvider, QuoteRequest } from "@ongkirhub/core";
+import type { LocationMethodInput, Quote, QuoteRequest, ShippingProvider } from "@ongkirhub/core";
 import { loadGoogleMaps, attachAutocomplete, type NormalizedPlace } from "./google.js";
-import { createRajaOngkirProvider } from "../../../packages/provider-rajaongkir/dist/provider.js";
-import { RAJAONGKIR_LOCATION_RECORDS } from "../../../packages/provider-rajaongkir/dist/location/generated/locations.generated.js";
-import { createBiteshipProvider } from "../../../packages/provider-biteship/dist/provider.js";
+import { createRajaOngkirProvider, RAJAONGKIR_LOCATION_RECORDS } from "@ongkirhub/provider-rajaongkir";
+import { createBiteshipProvider } from "@ongkirhub/provider-biteship";
 
 function DemoWarning() {
   return (
@@ -49,10 +48,52 @@ function ProviderSetup({ onProvidersChange }: { onProvidersChange: (p: ShippingP
   );
 }
 
+function toHierarchyLocation(location: LocationMethodInput): LocationMethodInput {
+  return {
+    method: "location",
+    countryCode: location.countryCode,
+    ...(location.level1 ? { level1: location.level1 } : {}),
+    ...(location.level2 ? { level2: location.level2 } : {}),
+    ...(location.level3 ? { level3: location.level3 } : {}),
+    ...(location.level4 ? { level4: location.level4 } : {}),
+  };
+}
+
+function toPostalLocation(location: LocationMethodInput): LocationMethodInput {
+  return {
+    method: "location",
+    countryCode: location.countryCode,
+    ...(location.postalCode ? { postalCode: location.postalCode } : {}),
+  };
+}
+
+function formatProviderError(error: any, selectedProviders: string[]): string {
+  const message = error?.message ?? "Failed";
+  const code = error?.code;
+  const providerKey = error?.providerKey;
+  const isBrowserNetworkFailure =
+    message === "Load failed" || message === "Failed to fetch";
+  const includesRajaOngkir = selectedProviders.includes("rajaongkir");
+
+  if (isBrowserNetworkFailure && includesRajaOngkir) {
+    return "RajaOngkir blocks direct browser requests due to CORS. Use a server-side OngkirHub runtime or HTTP boundary for RajaOngkir.";
+  }
+
+  if (
+    providerKey === "rajaongkir" &&
+    (code === "LOCATION_NOT_FOUND" || code === "LOCATION_AMBIGUOUS")
+  ) {
+    return "The selected Google location is too POI-specific or does not map cleanly to RajaOngkir's location hierarchy. Try selecting a broader neighborhood, kelurahan, or district instead of a landmark or station.";
+  }
+
+  return message;
+}
+
 function QuotePanel() {
   const hub = useOngkirHub();
   const [origin, setOrigin] = useState<NormalizedPlace | null>(null);
   const [destination, setDestination] = useState<NormalizedPlace | null>(null);
+  const [providerRequests, setProviderRequests] = useState<Record<string, QuoteRequest>>({});
   const [quotes, setQuotes] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,27 +115,39 @@ function QuotePanel() {
     setLoading(true);
     setError(null);
     try {
-      const request: QuoteRequest = {
-        origin: origin.location,
-        destination: destination.location,
-        parcels: [{ weightGrams: 1500 }],
-        totalWeightGrams: 1500,
-      };
-      const result = await hub.getQuotes(request);
-      setQuotes(result.quotes);
-    } catch (err: any) {
-      const message = err?.message ?? "Failed";
-      const isBrowserNetworkFailure =
-        message === "Load failed" || message === "Failed to fetch";
-      const includesRajaOngkir = selectedProviders.includes("rajaongkir");
+      const aggregatedQuotes: Quote[] = [];
+      const nextProviderRequests: Record<string, QuoteRequest> = {};
 
-      if (isBrowserNetworkFailure && includesRajaOngkir) {
-        setError(
-          "RajaOngkir blocks direct browser requests due to CORS. Use a server-side OngkirHub runtime or HTTP boundary for RajaOngkir.",
-        );
-      } else {
-        setError(message);
+      for (const providerKey of selectedProviders) {
+        const request: QuoteRequest = {
+          origin:
+            providerKey === "rajaongkir"
+              ? toHierarchyLocation(origin.location)
+              : providerKey === "biteship"
+                ? toPostalLocation(origin.location)
+                : origin.location,
+          destination:
+            providerKey === "rajaongkir"
+              ? toHierarchyLocation(destination.location)
+              : providerKey === "biteship"
+                ? toPostalLocation(destination.location)
+                : destination.location,
+          parcels: [{ weightGrams: 1500 }],
+          totalWeightGrams: 1500,
+        };
+        nextProviderRequests[providerKey] = request;
       }
+
+      setProviderRequests(nextProviderRequests);
+
+      for (const providerKey of selectedProviders) {
+        const request = nextProviderRequests[providerKey]!;
+        const result = await hub.getQuotes(request, { providers: [providerKey] });
+        aggregatedQuotes.push(...result.quotes);
+      }
+      setQuotes(aggregatedQuotes);
+    } catch (err: any) {
+      setError(formatProviderError(err, selectedProviders));
     } finally {
       setLoading(false);
     }
@@ -105,17 +158,74 @@ function QuotePanel() {
       <div style={{ marginBottom: "8px" }}>
         <label>Origin</label>
         <input ref={originRef} type="text" placeholder="Search origin address..." style={{ width: "100%", padding: "8px" }} />
-        {origin && <div style={{ fontSize: "12px", color: "#666" }}>{origin.rawLabel}</div>}
+        {origin && (
+          <>
+            <div style={{ fontSize: "12px", color: "#666" }}>{origin.rawLabel}</div>
+            <pre
+              style={{
+                marginTop: "6px",
+                padding: "8px",
+                borderRadius: "4px",
+                background: "#f8f9fa",
+                border: "1px solid #e5e7eb",
+                fontSize: "12px",
+                overflowX: "auto",
+              }}
+            >
+              {JSON.stringify(origin.location, null, 2)}
+            </pre>
+          </>
+        )}
       </div>
       <div style={{ marginBottom: "8px" }}>
         <label>Destination</label>
         <input ref={destRef} type="text" placeholder="Search destination address..." style={{ width: "100%", padding: "8px" }} />
-        {destination && <div style={{ fontSize: "12px", color: "#666" }}>{destination.rawLabel}</div>}
+        {destination && (
+          <>
+            <div style={{ fontSize: "12px", color: "#666" }}>{destination.rawLabel}</div>
+            <pre
+              style={{
+                marginTop: "6px",
+                padding: "8px",
+                borderRadius: "4px",
+                background: "#f8f9fa",
+                border: "1px solid #e5e7eb",
+                fontSize: "12px",
+                overflowX: "auto",
+              }}
+            >
+              {JSON.stringify(destination.location, null, 2)}
+            </pre>
+          </>
+        )}
       </div>
       <button onClick={fetchQuotes} disabled={loading || !origin || !destination} style={{ padding: "8px 16px" }}>
         {loading ? "Loading..." : "Get Quotes"}
       </button>
       {error && <div style={{ color: "#dc3545", marginTop: "8px" }}>{error}</div>}
+      {Object.keys(providerRequests).length > 0 && (
+        <div style={{ marginTop: "16px" }}>
+          <h4>Provider request preview</h4>
+          {Object.entries(providerRequests).map(([providerKey, request]) => (
+            <div key={providerKey} style={{ marginBottom: "12px" }}>
+              <div style={{ fontSize: "12px", fontWeight: 600, color: "#666" }}>{providerKey}</div>
+              <pre
+                style={{
+                  marginTop: "6px",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  background: "#f8f9fa",
+                  border: "1px solid #e5e7eb",
+                  fontSize: "12px",
+                  overflowX: "auto",
+                }}
+              >
+                {JSON.stringify(request, null, 2)}
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
       {quotes && (
         <div style={{ marginTop: "16px" }}>
           <h4>Quotes ({quotes.length})</h4>

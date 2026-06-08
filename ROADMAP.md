@@ -1,10 +1,13 @@
 # Roadmap
 
-## v0.1.0
+## v0.1.0 (current alpha)
 
-- Provider interface
-- Mock provider
-- REST API
+- Provider interface and contract (`@ongkirhub/core`)
+- Runtime orchestration (`@ongkirhub/runtime`)
+- Mock provider, Manual provider, RajaOngkir provider, Biteship provider
+- Optional HTTP API adapter (`@ongkirhub/api`)
+- TypeScript client (`@ongkirhub/client`)
+- React integrations (`@ongkirhub/react`, `@ongkirhub/react-api`)
 - Docker support
 
 ## v0.2.0

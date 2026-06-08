@@ -95,9 +95,12 @@ Parcel fields: weight in grams, optional dimensions (see `@ongkirhub/core`).
 | --- | --- | --- |
 | `PORT` | `3000` | HTTP port |
 | `HOST` | `0.0.0.0` | Bind host |
-| `ENABLED_PROVIDERS` | `mock,manual` | Comma-separated provider keys (`mock`, `manual`, `rajaongkir`). Unknown keys cause startup failure. |
+| `ENABLED_PROVIDERS` | `mock,manual` | Comma-separated provider keys (`mock`, `manual`, `rajaongkir`, `biteship`). Unknown keys cause startup failure. |
 | `RAJAONGKIR_API_KEY` | — | Required when `rajaongkir` is enabled. RajaOngkir API key (not returned by `/health`). |
 | `RAJAONGKIR_COURIERS` | — | Required when `rajaongkir` is enabled. Comma-separated courier codes (for example `jne,pos`). |
 | `RAJAONGKIR_BASE_URL` | RajaOngkir default | Optional upstream base URL override when `rajaongkir` is enabled. |
+| `BITESHIP_API_KEY` | — | Required when `biteship` is enabled. Biteship API key. |
+| `BITESHIP_COURIERS` | — | Required when `biteship` is enabled. Comma-separated courier codes (for example `jne,sicepat`). |
+| `BITESHIP_BASE_URL` | Biteship default | Optional upstream base URL override when `biteship` is enabled. |
 
-When `rajaongkir` is listed in `ENABLED_PROVIDERS`, missing `RAJAONGKIR_API_KEY` or `RAJAONGKIR_COURIERS` fails API startup immediately. When `rajaongkir` is not enabled, those variables are optional.
+When `rajaongkir` is listed in `ENABLED_PROVIDERS`, missing `RAJAONGKIR_API_KEY` or `RAJAONGKIR_COURIERS` fails API startup immediately. When `biteship` is listed, missing `BITESHIP_API_KEY` or `BITESHIP_COURIERS` fails startup. Variables for disabled providers are optional.

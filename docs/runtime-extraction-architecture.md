@@ -1,5 +1,7 @@
 # Runtime Extraction Architecture Brief
 
+> **Historical / Superseded.** This brief documents the reasoning behind extracting `@ongkirhub/runtime` from `apps/api`. The extraction is complete: `@ongkirhub/runtime` shipped in v0.1, `apps/api` was refactored into a thin HTTP adapter (`@ongkirhub/api`), and all phases described below are finished. For current architecture, see `README.md` and `docs/architecture.md`.
+
 ## Recommendation
 
 OngkirHub should be **framework-first, server-second**.
