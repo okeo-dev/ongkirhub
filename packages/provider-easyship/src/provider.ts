@@ -16,13 +16,17 @@ export interface EasyshipProvider extends ShippingProvider {
   getDebugInfo?(): object;
 }
 
-interface EasyshipRequestMetadata {
+export interface EasyshipRequestMetadata {
   originLine1?: string;
   destinationLine1?: string;
   hsCode?: string;
   setAsResidential?: boolean;
   calculateTaxAndDuties?: boolean;
   incoterms?: "DDU" | "DDP" | null;
+}
+
+function hasNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "";
 }
 
 function readEasyshipMetadata(
@@ -32,7 +36,34 @@ function readEasyshipMetadata(
   if (!raw || typeof raw !== "object") {
     return undefined;
   }
-  return raw as EasyshipRequestMetadata;
+
+  const input = raw as Record<string, unknown>;
+  const metadata: EasyshipRequestMetadata = {};
+
+  if (hasNonEmptyString(input.originLine1)) {
+    metadata.originLine1 = input.originLine1.trim();
+  }
+  if (hasNonEmptyString(input.destinationLine1)) {
+    metadata.destinationLine1 = input.destinationLine1.trim();
+  }
+  if (hasNonEmptyString(input.hsCode)) {
+    metadata.hsCode = input.hsCode.trim();
+  }
+  if (typeof input.setAsResidential === "boolean") {
+    metadata.setAsResidential = input.setAsResidential;
+  }
+  if (typeof input.calculateTaxAndDuties === "boolean") {
+    metadata.calculateTaxAndDuties = input.calculateTaxAndDuties;
+  }
+  if (
+    input.incoterms === "DDU" ||
+    input.incoterms === "DDP" ||
+    input.incoterms === null
+  ) {
+    metadata.incoterms = input.incoterms;
+  }
+
+  return Object.keys(metadata).length > 0 ? metadata : undefined;
 }
 
 function toEasyshipAddress(

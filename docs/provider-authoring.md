@@ -54,6 +54,27 @@ await assertProviderConformance(createAcmeProvider());
 
 Load secrets and upstream credentials in your app composition layer, not inside `getQuotes` contract code. Pass configured clients or rate tables into your provider factory (see `@ongkirhub/provider-manual`).
 
+## Provider-scoped request metadata
+
+`QuoteRequest.metadata` is the sanctioned extension slot for provider-specific alpha/beta inputs that do not belong in the shared quote contract yet.
+
+Use a provider-scoped namespace:
+
+```ts
+metadata: {
+  easyship: { ... },
+  shippo: { ... },
+}
+```
+
+Rules:
+
+- Keep shared fields in the normalized contract first (`origin`, `destination`, `parcels`, `declaredValue`).
+- Only put provider-specific knobs in `metadata.<providerKey>`.
+- Export a typed metadata shape from the provider package when you rely on it (for example `EasyshipRequestMetadata`).
+- Validate and normalize provider metadata inside the provider; do not treat it as an unstructured dump.
+- Document clearly when `metadata.<providerKey>` is part of a provider's supported alpha path.
+
 ## Registering in the orchestration layer
 
 **Current (v0.1):** provider orchestration lives in `@ongkirhub/runtime`. The HTTP adapter (`apps/api`) still composes built-in providers in `apps/api/src/registry/providers.ts`, then passes them into `createOngkirHub()`.

@@ -20,6 +20,7 @@ export {
 } from "./client.js";
 export {
   createEasyshipProvider,
+  type EasyshipRequestMetadata,
   type EasyshipProvider,
 } from "./provider.js";
 export {

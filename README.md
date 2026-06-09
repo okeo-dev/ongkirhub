@@ -414,6 +414,8 @@ metadata: {
 
 This keeps the shared `QuoteRequest` contract stable while allowing the Easyship provider to supply the item/address details its rates endpoint currently expects. International and customs semantics are still intentionally deferred at the shared-contract level.
 
+The typed helper for that provider-local metadata is exported from `@ongkirhub/provider-easyship` as `EasyshipRequestMetadata`.
+
 ### React server-side runtime example
 
 A minimal server-rendered React example lives in `examples/react-server-runtime`:
