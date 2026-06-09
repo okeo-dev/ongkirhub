@@ -4,7 +4,7 @@
 
 - Provider interface and contract (`@ongkirhub/core`)
 - Runtime orchestration (`@ongkirhub/runtime`)
-- Mock provider, Manual provider, RajaOngkir provider, Biteship provider
+- Mock provider, Manual provider, RajaOngkir provider, Biteship provider, EasyPost provider (domestic alpha), Shippo provider (domestic alpha)
 - Optional HTTP API adapter (`@ongkirhub/api`)
 - TypeScript client (`@ongkirhub/client`)
 - React integrations (`@ongkirhub/react`, `@ongkirhub/react-api`)

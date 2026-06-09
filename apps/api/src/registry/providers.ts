@@ -1,5 +1,8 @@
 import type { ShippingProvider } from "@ongkirhub/core";
 import { createBiteshipProvider } from "@ongkirhub/provider-biteship";
+import { createEasyPostProvider } from "@ongkirhub/provider-easypost";
+import { createShippoProvider } from "@ongkirhub/provider-shippo";
+import { createEasyshipProvider } from "@ongkirhub/provider-easyship";
 import { defaultManualProvider } from "@ongkirhub/provider-manual";
 import { mockProvider } from "@ongkirhub/provider-mock";
 import {
@@ -8,7 +11,7 @@ import {
 } from "@ongkirhub/provider-rajaongkir";
 import type { ApiEnv } from "../config/env.js";
 
-export const BUILT_IN_PROVIDER_KEYS = ["mock", "manual", "rajaongkir", "biteship"] as const;
+export const BUILT_IN_PROVIDER_KEYS = ["mock", "manual", "rajaongkir", "biteship", "easypost", "shippo", "easyship"] as const;
 
 const staticProviders: Record<"mock" | "manual", ShippingProvider> = {
   mock: mockProvider,
@@ -34,6 +37,24 @@ export function createProviderRegistry(env: ApiEnv): Map<string, ShippingProvide
   if (enabledProviders.includes("biteship") && !env.biteship) {
     throw new Error(
       "Biteship is enabled in ENABLED_PROVIDERS but Biteship configuration is missing",
+    );
+  }
+
+  if (enabledProviders.includes("easypost") && !env.easypost) {
+    throw new Error(
+      "EasyPost is enabled in ENABLED_PROVIDERS but EasyPost configuration is missing",
+    );
+  }
+
+  if (enabledProviders.includes("shippo") && !env.shippo) {
+    throw new Error(
+      "Shippo is enabled in ENABLED_PROVIDERS but Shippo configuration is missing",
+    );
+  }
+
+  if (enabledProviders.includes("easyship") && !env.easyship) {
+    throw new Error(
+      "Easyship is enabled in ENABLED_PROVIDERS but Easyship configuration is missing",
     );
   }
 
@@ -66,6 +87,45 @@ export function createProviderRegistry(env: ApiEnv): Map<string, ShippingProvide
           couriers: env.biteship!.couriers,
           baseUrl: env.biteship!.baseUrl,
           debug: env.biteship!.debug,
+        }),
+      );
+      continue;
+    }
+
+    if (key === "easypost") {
+      registry.set(
+        key,
+        createEasyPostProvider({
+          apiKey: env.easypost!.apiKey,
+          carriers: env.easypost!.carriers,
+          baseUrl: env.easypost!.baseUrl,
+          debug: env.easypost!.debug,
+        }),
+      );
+      continue;
+    }
+
+    if (key === "shippo") {
+      registry.set(
+        key,
+        createShippoProvider({
+          apiKey: env.shippo!.apiKey,
+          carriers: env.shippo!.carriers,
+          baseUrl: env.shippo!.baseUrl,
+          debug: env.shippo!.debug,
+        }),
+      );
+      continue;
+    }
+
+    if (key === "easyship") {
+      registry.set(
+        key,
+        createEasyshipProvider({
+          apiKey: env.easyship!.apiKey,
+          carriers: env.easyship!.carriers,
+          baseUrl: env.easyship!.baseUrl,
+          debug: env.easyship!.debug,
         }),
       );
       continue;

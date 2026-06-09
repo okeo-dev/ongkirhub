@@ -66,6 +66,12 @@ importers:
       '@ongkirhub/provider-biteship':
         specifier: workspace:*
         version: link:../../packages/provider-biteship
+      '@ongkirhub/provider-easypost':
+        specifier: workspace:*
+        version: link:../../packages/provider-easypost
+      '@ongkirhub/provider-easyship':
+        specifier: workspace:*
+        version: link:../../packages/provider-easyship
       '@ongkirhub/provider-manual':
         specifier: workspace:*
         version: link:../../packages/provider-manual
@@ -75,6 +81,9 @@ importers:
       '@ongkirhub/provider-rajaongkir':
         specifier: workspace:*
         version: link:../../packages/provider-rajaongkir
+      '@ongkirhub/provider-shippo':
+        specifier: workspace:*
+        version: link:../../packages/provider-shippo
       '@ongkirhub/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
@@ -122,6 +131,44 @@ importers:
       '@ongkirhub/client':
         specifier: workspace:*
         version: link:../../packages/client
+    devDependencies:
+      '@types/node':
+        specifier: ^22.13.4
+        version: 22.19.19
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  examples/easypost-smoke:
+    dependencies:
+      '@ongkirhub/provider-easypost':
+        specifier: workspace:*
+        version: link:../../packages/provider-easypost
+      '@ongkirhub/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+    devDependencies:
+      '@types/node':
+        specifier: ^22.13.4
+        version: 22.19.19
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  examples/easyship-smoke:
+    dependencies:
+      '@ongkirhub/provider-easyship':
+        specifier: workspace:*
+        version: link:../../packages/provider-easyship
+      '@ongkirhub/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
     devDependencies:
       '@types/node':
         specifier: ^22.13.4
@@ -337,6 +384,25 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
+  examples/shippo-smoke:
+    dependencies:
+      '@ongkirhub/provider-shippo':
+        specifier: workspace:*
+        version: link:../../packages/provider-shippo
+      '@ongkirhub/runtime':
+        specifier: workspace:*
+        version: link:../../packages/runtime
+    devDependencies:
+      '@types/node':
+        specifier: ^22.13.4
+        version: 22.19.19
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   packages/client:
     dependencies:
       '@ongkirhub/core':
@@ -379,6 +445,38 @@ importers:
         version: 3.2.4(@types/node@22.19.19)(jsdom@26.0.0)(tsx@4.22.4)(yaml@2.9.0)
 
   packages/provider-biteship:
+    dependencies:
+      '@ongkirhub/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.7
+        version: 22.19.19
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.5
+        version: 3.2.4(@types/node@22.19.19)(jsdom@26.0.0)(tsx@4.22.4)(yaml@2.9.0)
+
+  packages/provider-easypost:
+    dependencies:
+      '@ongkirhub/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.7
+        version: 22.19.19
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.5
+        version: 3.2.4(@types/node@22.19.19)(jsdom@26.0.0)(tsx@4.22.4)(yaml@2.9.0)
+
+  packages/provider-easyship:
     dependencies:
       '@ongkirhub/core':
         specifier: workspace:*
@@ -441,6 +539,22 @@ importers:
       yaml:
         specifier: ^2.7.0
         version: 2.9.0
+
+  packages/provider-shippo:
+    dependencies:
+      '@ongkirhub/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.7
+        version: 22.19.19
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.5
+        version: 3.2.4(@types/node@22.19.19)(jsdom@26.0.0)(tsx@4.22.4)(yaml@2.9.0)
 
   packages/react:
     dependencies:

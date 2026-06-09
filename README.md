@@ -59,6 +59,8 @@ Included:
   - `manual`
   - `rajaongkir`
   - `biteship`
+  - `easypost` (domestic alpha)
+  - `shippo` (domestic alpha)
 
 Not included yet:
 
@@ -75,6 +77,8 @@ Not included yet:
 | Manual | Implemented | Yes | Yes | Static config |
 | RajaOngkir | Implemented | Yes | Yes | Hierarchy / provider mapping |
 | Biteship | Implemented | Yes | No | Postal code |
+| EasyPost | Implemented | Yes | No | Flat address (postal code + state + city) |
+| Shippo | Implemented | Yes | No | Flat address (postal code + state + city) |
 
 ## Fastest first quote
 
@@ -148,7 +152,7 @@ Example response:
 }
 ```
 
-If you want a real provider next, enable RajaOngkir or Biteship below.
+If you want a real provider next, enable RajaOngkir, Biteship, EasyPost, or Shippo below.
 
 ## Common adoption paths
 
@@ -231,12 +235,29 @@ pnpm dev
 
 Biteship v0.1 uses **postal code lookup** for origin and destination. The request must include `postalCode` on both `origin` and `destination`. Non-Indonesia routes are rejected with `UNSUPPORTED_ROUTE`.
 
+### EasyPost
+
+Add `easypost` to `ENABLED_PROVIDERS` and set EasyPost credentials:
+
+```bash
+export ENABLED_PROVIDERS=mock,easypost
+export EASYPOST_API_KEY=your-api-key
+# optional:
+# export EASYPOST_CARRIERS=USPS,UPS
+# export EASYPOST_BASE_URL=https://api.easypost.com/v2
+pnpm dev
+```
+
+EasyPost v0.1 is **domestic-only** and uses a flat address model. Both `origin` and `destination` should include `countryCode`, `postalCode`, `level1` (state), and `level2` (city).
+
 ### Location behavior note
 
 Providers do not all accept the same kind of location input:
 
 - RajaOngkir relies on hierarchy and provider-owned mapping data
 - Biteship currently relies on postal code lookup
+- EasyPost and Shippo use a flat address model; supply `countryCode`, `postalCode`, `level1`, and `level2`
+- Easyship starts from the same flat address subset, but its current alpha path also uses provider-local `metadata.easyship` fields for address/item details
 
 OngkirHub normalizes the request contract, but frontend address-entry and refinement UX still belong to the consuming application. OngkirHub stops at quote success or structured error; applications decide how to collect better location input, retry, or remediate provider-specific failures.
 
@@ -247,6 +268,9 @@ Set `<PROVIDER>_DEBUG=1` to enable provider-local request/response diagnostics:
 ```bash
 export RAJAONGKIR_DEBUG=1
 export BITESHIP_DEBUG=1
+export EASYPOST_DEBUG=1
+export SHIPPO_DEBUG=1
+export EASYSHIP_DEBUG=1
 ```
 
 - disabled by default
@@ -267,6 +291,9 @@ export BITESHIP_DEBUG=1
 | `@ongkirhub/provider-manual` | Configurable static-rate provider |
 | `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic and international rates |
 | `@ongkirhub/provider-biteship` | Biteship courier aggregator rates |
+| `@ongkirhub/provider-easypost` | EasyPost multi-carrier rates (domestic alpha) |
+| `@ongkirhub/provider-shippo` | Shippo multi-carrier rates (domestic alpha) |
+| `@ongkirhub/provider-easyship` | Easyship multi-carrier rates (domestic alpha) |
 | `@ongkirhub/location-google` | Google Places location normalization (optional) |
 
 Dependency direction:
@@ -301,6 +328,91 @@ pnpm start
 ```
 
 It demonstrates `createOngkirHub()` with local providers (`mock` + `manual`), calling `hub.getQuotes()` directly with no HTTP server.
+
+### EasyPost smoke example
+
+A minimal EasyPost runtime example lives in `examples/easypost-smoke`:
+
+```bash
+cd examples/easypost-smoke
+EASYPOST_API_KEY=your_key pnpm start
+```
+
+It demonstrates `createOngkirHub()` with `@ongkirhub/provider-easypost`, calling `hub.getQuotes()` directly with no HTTP server. The example uses a US domestic route (Beverly Hills, CA → New York, NY) and shows the supported `LocationInput` shape for EasyPost in alpha.
+
+### Shippo smoke example
+
+A minimal Shippo runtime example lives in `examples/shippo-smoke`:
+
+```bash
+cd examples/shippo-smoke
+SHIPPO_API_KEY=your_key pnpm start
+```
+
+It demonstrates `createOngkirHub()` with `@ongkirhub/provider-shippo`, calling `hub.getQuotes()` directly with no HTTP server. The example uses a US domestic route (Beverly Hills, CA → New York, NY), includes the required parcel dimensions, and shows the supported `LocationInput` shape for Shippo in alpha.
+
+**Note:** Shippo test mode may return placeholder/sample rates. This example is for integration validation, not real-price validation.
+
+### Easyship smoke example
+
+A minimal Easyship runtime example lives in `examples/easyship-smoke`:
+
+```bash
+cd examples/easyship-smoke
+EASYSHIP_API_KEY=your_key pnpm start
+```
+
+It demonstrates `createOngkirHub()` with `@ongkirhub/provider-easyship`, calling `hub.getQuotes()` directly with no HTTP server. The example uses a US domestic route (Beverly Hills, CA → New York, NY), includes the required parcel dimensions, and shows the current Easyship alpha request shape, including provider-local `metadata.easyship` fields for destination `line_1` and `hs_code`.
+
+**Note:** Easyship alpha is domestic-only. International and customs support is intentionally deferred.
+
+### Shippo
+
+Add `shippo` to `ENABLED_PROVIDERS` and set Shippo credentials:
+
+```bash
+export ENABLED_PROVIDERS=mock,shippo
+export SHIPPO_API_KEY=your-api-key
+# optional:
+# export SHIPPO_CARRIERS=USPS,UPS
+# export SHIPPO_BASE_URL=https://api.goshippo.com
+pnpm dev
+```
+
+Shippo v0.1 is **domestic-only** and uses a flat address model. Both `origin` and `destination` should include `countryCode`, `postalCode`, `level1` (state), and `level2` (city). Parcels must include `weightGrams` and `dimensions` (`lengthCm`, `widthCm`, `heightCm`).
+
+**Important:** Shippo test mode may return placeholder/sample rates. It is useful for integration validation, not for validating real-world shipping prices. For production-rate validation, use a live Shippo token and do not purchase labels.
+
+### Easyship
+
+Add `easyship` to `ENABLED_PROVIDERS` and set Easyship credentials:
+
+```bash
+export ENABLED_PROVIDERS=mock,easyship
+export EASYSHIP_API_KEY=your-api-key
+# optional:
+# export EASYSHIP_CARRIERS=USPS,UPS
+# export EASYSHIP_BASE_URL=https://public-api.easyship.com
+pnpm dev
+```
+
+Easyship v0.1 is **domestic-only** and uses a flat address model. Both `origin` and `destination` should include `countryCode`, `postalCode`, `level1` (state), and `level2` (city). Parcels must include `weightGrams` and `dimensions` (`lengthCm`, `widthCm`, `heightCm`).
+
+For the current alpha, Easyship also uses a provider-local metadata escape hatch:
+
+```ts
+metadata: {
+  easyship: {
+    destinationLine1: "350 5th Ave",
+    hsCode: "49011000",
+    setAsResidential: false,
+    calculateTaxAndDuties: true,
+    incoterms: "DDU"
+  }
+}
+```
+
+This keeps the shared `QuoteRequest` contract stable while allowing the Easyship provider to supply the item/address details its rates endpoint currently expects. International and customs semantics are still intentionally deferred at the shared-contract level.
 
 ### React server-side runtime example
 
@@ -368,7 +480,7 @@ It combines Google Places Autocomplete with `@ongkirhub/react` running providers
 If you are evaluating OngkirHub for adoption:
 
 1. start with `examples/runtime-smoke` to validate the embedded runtime contract
-2. enable RajaOngkir or Biteship in runtime or API mode to validate a real provider path
+2. enable RajaOngkir, Biteship, EasyPost, Shippo, or Easyship in runtime or API mode to validate a real provider path
 3. use `examples/client-smoke` or `examples/react-demo` only if you specifically want to evaluate the optional HTTP/browser adapter path
 4. read provider-specific limits before assuming all providers support the same routes or location inputs
 

@@ -3,6 +3,21 @@ import {
   loadBiteshipConfigFromEnv,
   requireBiteshipConfigFromEnv,
 } from "@ongkirhub/provider-biteship";
+import type { EasyPostEnvConfig } from "@ongkirhub/provider-easypost";
+import {
+  loadEasyPostConfigFromEnv,
+  requireEasyPostConfigFromEnv,
+} from "@ongkirhub/provider-easypost";
+import type { ShippoEnvConfig } from "@ongkirhub/provider-shippo";
+import {
+  loadShippoConfigFromEnv,
+  requireShippoConfigFromEnv,
+} from "@ongkirhub/provider-shippo";
+import type { EasyshipEnvConfig } from "@ongkirhub/provider-easyship";
+import {
+  loadEasyshipConfigFromEnv,
+  requireEasyshipConfigFromEnv,
+} from "@ongkirhub/provider-easyship";
 import type { RajaOngkirEnvConfig } from "@ongkirhub/provider-rajaongkir";
 import {
   loadRajaOngkirConfigFromEnv,
@@ -15,6 +30,9 @@ export interface ApiEnv {
   enabledProviders: string[];
   rajaongkir?: RajaOngkirEnvConfig;
   biteship?: BiteshipEnvConfig;
+  easypost?: EasyPostEnvConfig;
+  shippo?: ShippoEnvConfig;
+  easyship?: EasyshipEnvConfig;
 }
 
 function parseProviderList(value: string | undefined): string[] {
@@ -46,11 +64,29 @@ export function loadEnv(
     ? requireBiteshipConfigFromEnv(env)
     : loadBiteshipConfigFromEnv(env);
 
+  const easypostEnabled = enabledProviders.includes("easypost");
+  const easypost = easypostEnabled
+    ? requireEasyPostConfigFromEnv(env)
+    : loadEasyPostConfigFromEnv(env);
+
+  const shippoEnabled = enabledProviders.includes("shippo");
+  const shippo = shippoEnabled
+    ? requireShippoConfigFromEnv(env)
+    : loadShippoConfigFromEnv(env);
+
+  const easyshipEnabled = enabledProviders.includes("easyship");
+  const easyship = easyshipEnabled
+    ? requireEasyshipConfigFromEnv(env)
+    : loadEasyshipConfigFromEnv(env);
+
   return {
     port,
     host: env.HOST ?? "0.0.0.0",
     enabledProviders,
     ...(rajaongkir ? { rajaongkir } : {}),
     ...(biteship ? { biteship } : {}),
+    ...(easypost ? { easypost } : {}),
+    ...(shippo ? { shippo } : {}),
+    ...(easyship ? { easyship } : {}),
   };
 }

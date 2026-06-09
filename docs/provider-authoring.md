@@ -64,7 +64,12 @@ Embedded consumers can also compose providers directly and pass them to `createO
 
 ## Location mappings (real providers)
 
-Public callers send `LocationInput` (`method: "location"`). Your package resolves that into your upstream provider IDs using **provider-owned** data and the shared resolver in `@ongkirhub/core`. Do not expose provider location IDs in public API types or invent a separate resolution algorithm without documenting an exception.
+Public callers send `LocationInput` (`method: "location"`). How your package uses that input depends on your provider archetype:
+
+1. **Hierarchy-resolving providers** (e.g. RajaOngkir) resolve `LocationInput` into upstream provider IDs using **provider-owned** mapping data and the shared resolver in `@ongkirhub/core`.
+2. **Flat-address pass-through providers** (e.g. EasyPost, Shippo) map `LocationInput` fields directly onto the upstream address format without resolution or provider-owned location data.
+
+Do not expose provider location IDs in public API types or invent a separate resolution algorithm without documenting an exception.
 
 ### Authoring format (source of truth)
 
