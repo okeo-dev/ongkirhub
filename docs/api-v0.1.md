@@ -28,6 +28,8 @@ Request body:
 | `declaredValue` | `{ amount, currency }` | No |
 | `metadata` | object | No |
 
+`declaredValue` remains part of the shared request contract for future/provider-specific use, but current alpha providers do not depend on it for their primary quote path. Provider-specific extensions should use `metadata.<providerKey>`.
+
 ### Location input (`LocationInput`)
 
 Frozen v0.1 contract: **location method only**. Origin and destination use the same shape. Provider-specific location IDs are not accepted on the public API.

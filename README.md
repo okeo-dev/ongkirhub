@@ -79,6 +79,7 @@ Not included yet:
 | Biteship | Implemented | Yes | No | Postal code |
 | EasyPost | Implemented | Yes | No | Flat address (postal code + state + city) |
 | Shippo | Implemented | Yes | No | Flat address (postal code + state + city) |
+| Easyship | Implemented | Yes | No | Flat address + provider metadata (`metadata.easyship`) |
 
 ## Fastest first quote
 
