@@ -92,6 +92,15 @@ const moneySchema = z.object({
   currency: z.string().min(1),
 });
 
+const quoteItemSchema = z.object({
+  description: z.string().min(1),
+  quantity: z.number().int().positive(),
+  weightGrams: z.number().positive(),
+  declaredValue: moneySchema.optional(),
+  hsCode: z.string().optional(),
+  originCountryCode: z.string().optional(),
+});
+
 export const quoteRequestSchema = z.object({
   providers: z.union([z.string(), z.array(z.string())]).optional(),
   origin: originLocationInputSchema,
@@ -99,6 +108,7 @@ export const quoteRequestSchema = z.object({
   parcels: z.array(parcelSchema).min(1),
   totalWeightGrams: z.number().positive(),
   declaredValue: moneySchema.optional(),
+  items: z.array(quoteItemSchema).optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 

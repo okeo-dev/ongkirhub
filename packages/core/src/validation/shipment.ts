@@ -3,7 +3,7 @@ import {
   LocationValidationError,
   validateLocationInput,
 } from "../location/input.js";
-import type { Parcel, QuoteRequest } from "../types/shipment.js";
+import type { Parcel, QuoteItem, QuoteRequest } from "../types/shipment.js";
 
 function assertParcel(value: unknown, index: number): asserts value is Parcel {
   if (value === null || typeof value !== "object") {
@@ -22,6 +22,63 @@ function assertParcel(value: unknown, index: number): asserts value is Parcel {
       "INVALID_REQUEST",
       `parcels[${index}].weightGrams must be a positive number`,
     );
+  }
+}
+
+function assertQuoteItem(value: unknown, index: number): asserts value is QuoteItem {
+  if (value === null || typeof value !== "object") {
+    throw new ProviderError(
+      "INVALID_REQUEST",
+      `items[${index}] must be an object`,
+    );
+  }
+
+  const item = value as QuoteItem;
+
+  if (typeof item.description !== "string" || item.description.trim() === "") {
+    throw new ProviderError(
+      "INVALID_REQUEST",
+      `items[${index}].description must be a non-empty string`,
+    );
+  }
+
+  if (
+    typeof item.quantity !== "number" ||
+    !Number.isInteger(item.quantity) ||
+    item.quantity <= 0
+  ) {
+    throw new ProviderError(
+      "INVALID_REQUEST",
+      `items[${index}].quantity must be a positive integer`,
+    );
+  }
+
+  if (
+    typeof item.weightGrams !== "number" ||
+    !Number.isFinite(item.weightGrams) ||
+    item.weightGrams <= 0
+  ) {
+    throw new ProviderError(
+      "INVALID_REQUEST",
+      `items[${index}].weightGrams must be a positive number`,
+    );
+  }
+
+  if (item.declaredValue !== undefined) {
+    if (
+      item.declaredValue === null ||
+      typeof item.declaredValue !== "object" ||
+      typeof item.declaredValue.amount !== "number" ||
+      !Number.isFinite(item.declaredValue.amount) ||
+      item.declaredValue.amount < 0 ||
+      typeof item.declaredValue.currency !== "string" ||
+      item.declaredValue.currency.trim() === ""
+    ) {
+      throw new ProviderError(
+        "INVALID_REQUEST",
+        `items[${index}].declaredValue must be a valid money object`,
+      );
+    }
   }
 }
 
@@ -55,6 +112,16 @@ export function validateQuoteRequest(input: unknown): QuoteRequest {
 
   body.parcels.forEach((parcel, index) => assertParcel(parcel, index));
 
+  if (body.items !== undefined) {
+    if (!Array.isArray(body.items)) {
+      throw new ProviderError(
+        "INVALID_REQUEST",
+        "items must be an array when provided",
+      );
+    }
+    body.items.forEach((item, index) => assertQuoteItem(item, index));
+  }
+
   if (
     typeof body.totalWeightGrams !== "number" ||
     !Number.isFinite(body.totalWeightGrams) ||
@@ -72,6 +139,7 @@ export function validateQuoteRequest(input: unknown): QuoteRequest {
     parcels: body.parcels as Parcel[],
     totalWeightGrams: body.totalWeightGrams,
     declaredValue: body.declaredValue as QuoteRequest["declaredValue"],
+    items: body.items as QuoteItem[] | undefined,
     metadata: body.metadata as QuoteRequest["metadata"],
   };
 }

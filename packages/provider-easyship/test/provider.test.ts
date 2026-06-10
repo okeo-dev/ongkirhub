@@ -38,9 +38,11 @@ const defaultParcel = {
 };
 
 function makeEasyshipRatesResponse(rates: unknown[]) {
+  const body = JSON.stringify({ rates });
   return {
     ok: true,
     status: 200,
+    text: async () => body,
     json: async () => ({ rates }),
   };
 }
@@ -276,7 +278,7 @@ describe("createEasyshipProvider", () => {
     ).rejects.toMatchObject({ code: "LOCATION_NOT_FOUND" });
   });
 
-  it("throws for cross-country routes", async () => {
+  it("throws INVALID_REQUEST for cross-country routes without items", async () => {
     const provider = createEasyshipProvider(baseConfig);
     await expect(
       provider.getQuotes({
@@ -285,7 +287,87 @@ describe("createEasyshipProvider", () => {
         parcels: [defaultParcel],
         totalWeightGrams: 1500,
       }),
-    ).rejects.toMatchObject({ code: "UNSUPPORTED_ROUTE" });
+    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+  });
+
+  it("accepts cross-country routes when request.items is provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      makeEasyshipRatesResponse([
+        makeEasyshipRate({
+          courier_id: "usps",
+          courier_name: "USPS",
+          service_level_name: "Priority Mail International",
+          total_charge: 45.0,
+          currency: "USD",
+          delivery_days: 5,
+        }),
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = createEasyshipProvider(baseConfig);
+    const quotes = await provider.getQuotes({
+      origin: usOrigin,
+      destination: { ...usDestination, countryCode: "CA", postalCode: "M5V 3A8", level1: "ON", level2: "Toronto" },
+      parcels: [defaultParcel],
+      totalWeightGrams: 1500,
+      items: [
+        {
+          description: "Handmade ceramic mug",
+          quantity: 2,
+          weightGrams: 500,
+          declaredValue: { amount: 25.0, currency: "USD" },
+          hsCode: "691200",
+          originCountryCode: "US",
+        },
+      ],
+    });
+
+    expect(quotes).toHaveLength(1);
+    expect(quotes[0]?.price.amount).toBe(45.0);
+
+    const [, requestInit] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(requestInit?.body as string);
+    expect(body.parcels[0].items[0]).toMatchObject({
+      description: "Handmade ceramic mug",
+      category: "others",
+      quantity: 2,
+      actual_weight: 0.5,
+      declared_currency: "USD",
+      declared_customs_value: 25.0,
+      hs_code: "691200",
+      origin_country_alpha2: "US",
+    });
+  });
+
+  it("throws INVALID_REQUEST when international items omit declaredValue", async () => {
+    const provider = createEasyshipProvider(baseConfig);
+    await expect(
+      provider.getQuotes({
+        origin: usOrigin,
+        destination: {
+          ...usDestination,
+          countryCode: "CA",
+          postalCode: "M5V 3A8",
+          level1: "ON",
+          level2: "Toronto",
+        },
+        parcels: [defaultParcel],
+        totalWeightGrams: 1500,
+        items: [
+          {
+            description: "Handmade ceramic mug",
+            quantity: 2,
+            weightGrams: 500,
+            hsCode: "691200",
+            originCountryCode: "US",
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_REQUEST",
+      message: /items\[0\]\.declaredValue/,
+    });
   });
 
   it("maps upstream auth failures to ProviderError", async () => {
@@ -294,6 +376,7 @@ describe("createEasyshipProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 401,
+        text: async () => JSON.stringify({ message: "Unauthorized" }),
         json: async () => ({ message: "Unauthorized" }),
       }),
     );
@@ -315,6 +398,7 @@ describe("createEasyshipProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 429,
+        text: async () => JSON.stringify({ message: "Rate limit exceeded" }),
         json: async () => ({ message: "Rate limit exceeded" }),
       }),
     );
@@ -336,6 +420,7 @@ describe("createEasyshipProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 503,
+        text: async () => JSON.stringify({ message: "Service unavailable" }),
         json: async () => ({ message: "Service unavailable" }),
       }),
     );
@@ -357,6 +442,7 @@ describe("createEasyshipProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
+        text: async () => JSON.stringify({ message: "Country not supported" }),
         json: async () => ({ message: "Country not supported" }),
       }),
     );
@@ -378,6 +464,7 @@ describe("createEasyshipProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
+        text: async () => JSON.stringify({ error: "Route not found" }),
         json: async () => ({ error: "Route not found" }),
       }),
     );
@@ -399,6 +486,7 @@ describe("createEasyshipProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
+        text: async () => JSON.stringify({ message: "Invalid address: postal_code not found" }),
         json: async () => ({ message: "Invalid address: postal_code not found" }),
       }),
     );
@@ -420,6 +508,7 @@ describe("createEasyshipProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
+        text: async () => JSON.stringify({ message: "Parcel weight is required" }),
         json: async () => ({ message: "Parcel weight is required" }),
       }),
     );
@@ -441,6 +530,17 @@ describe("createEasyshipProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 422,
+        text: async () =>
+          JSON.stringify({
+            error: {
+              code: "invalid_content",
+              message: "The request body content is not valid.",
+              details: [
+                `{"description":"Parcel"} is not any of in #/components/schemas/ParcelRateCreate/properties/items/items`,
+              ],
+              type: "invalid_request_error",
+            },
+          }),
         json: async () => ({
           error: {
             code: "invalid_content",
@@ -503,6 +603,7 @@ describe("createEasyshipProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 418,
+        text: async () => JSON.stringify({ message: "I'm a teapot" }),
         json: async () => ({ message: "I'm a teapot" }),
       }),
     );

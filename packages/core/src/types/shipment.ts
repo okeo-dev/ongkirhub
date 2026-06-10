@@ -17,11 +17,21 @@ export interface Money {
   currency: string;
 }
 
+export interface QuoteItem {
+  description: string;
+  quantity: number;
+  weightGrams: number;
+  declaredValue?: Money;
+  hsCode?: string;
+  originCountryCode?: string;
+}
+
 export interface QuoteRequest {
   origin: LocationInput;
   destination: LocationInput;
   parcels: Parcel[];
   totalWeightGrams: number;
   declaredValue?: Money;
+  items?: QuoteItem[];
   metadata?: Record<string, unknown>;
 }

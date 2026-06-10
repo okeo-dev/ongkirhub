@@ -69,7 +69,7 @@ metadata: {
 
 Rules:
 
-- Keep shared fields in the normalized contract first (`origin`, `destination`, `parcels`, `declaredValue`).
+- Keep shared fields in the normalized contract first (`origin`, `destination`, `parcels`, `declaredValue`, `items`).
 - Only put provider-specific knobs in `metadata.<providerKey>`.
 - Export a typed metadata shape from the provider package when you rely on it (for example `EasyshipRequestMetadata`).
 - Validate and normalize provider metadata inside the provider; do not treat it as an unstructured dump.
@@ -88,7 +88,7 @@ Embedded consumers can also compose providers directly and pass them to `createO
 Public callers send `LocationInput` (`method: "location"`). How your package uses that input depends on your provider archetype:
 
 1. **Hierarchy-resolving providers** (e.g. RajaOngkir) resolve `LocationInput` into upstream provider IDs using **provider-owned** mapping data and the shared resolver in `@ongkirhub/core`.
-2. **Flat-address pass-through providers** (e.g. EasyPost, Shippo, Easyship) map `LocationInput` fields directly onto the upstream address format without resolution or provider-owned location data. Some providers may also rely on typed `metadata.<providerKey>` extensions for alpha-specific request details that do not belong in the shared core contract yet.
+2. **Flat-address pass-through providers** (e.g. EasyPost, Shippo, Easyship) map `LocationInput` fields directly onto the upstream address format without resolution or provider-owned location data. Easyship additionally consumes the shared `items` array for international customs data. Some providers may also rely on typed `metadata.<providerKey>` extensions for alpha-specific request details that do not belong in the shared core contract yet.
 
 Do not expose provider location IDs in public API types or invent a separate resolution algorithm without documenting an exception.
 

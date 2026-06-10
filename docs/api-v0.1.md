@@ -26,9 +26,20 @@ Request body:
 | `parcels` | array of parcel objects | Yes |
 | `totalWeightGrams` | number | Yes |
 | `declaredValue` | `{ amount, currency }` | No |
+| `items` | array of item objects | No |
 | `metadata` | object | No |
 
-`declaredValue` remains part of the shared request contract for future/provider-specific use, but current alpha providers do not depend on it for their primary quote path. Provider-specific extensions should use `metadata.<providerKey>`.
+`declaredValue` remains part of the shared request contract for future/provider-specific use, but current alpha providers do not depend on it for their primary quote path.
+
+`items` is an optional array of line-item customs data. When provided, each item must include:
+- `description` (string)
+- `quantity` (positive integer)
+- `weightGrams` (positive number)
+- `declaredValue` (optional `{ amount, currency }`)
+- `hsCode` (optional string)
+- `originCountryCode` (optional string)
+
+Provider-specific extensions should use `metadata.<providerKey>`.
 
 ### Location input (`LocationInput`)
 
@@ -123,4 +134,4 @@ When `rajaongkir` is listed in `ENABLED_PROVIDERS`, missing `RAJAONGKIR_API_KEY`
 
 **Shippo alpha limitation:** Shippo is domestic-only in the alpha. Cross-country shipments are rejected with `UNSUPPORTED_ROUTE`. Parcels must include `dimensions` (`lengthCm`, `widthCm`, `heightCm`). Shippo test mode may return placeholder/sample rates; it is useful for integration validation, not for validating real-world shipping prices.
 
-**Easyship alpha limitation:** Easyship is domestic-only in the alpha. Cross-country shipments are rejected with `UNSUPPORTED_ROUTE`. Parcels must include `dimensions` (`lengthCm`, `widthCm`, `heightCm`). The current Easyship alpha also relies on provider-local `metadata.easyship` fields for details such as destination `line_1`, `hsCode`, and rate flags (`incoterms`, `calculateTaxAndDuties`, `setAsResidential`). International and customs semantics are intentionally deferred at the shared-contract level.
+**Easyship alpha limitation:** Easyship supports domestic quotes out of the box and international quotes via the alpha `request.items` path. Parcels must include `dimensions` (`lengthCm`, `widthCm`, `heightCm`). International requests without `request.items` are rejected with `INVALID_REQUEST`. The current Easyship alpha also relies on provider-local `metadata.easyship` fields for address lines (`originLine1`, `destinationLine1`) and rate flags (`incoterms`, `calculateTaxAndDuties`, `setAsResidential`). Provider-specific customs admin (certification, EEI, restrictions) remains intentionally deferred at the shared-contract level.

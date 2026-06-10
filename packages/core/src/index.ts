@@ -13,6 +13,7 @@ export type {
   Dimensions,
   Money,
   Parcel,
+  QuoteItem,
   QuoteRequest,
 } from "./types/shipment.js";
 export {

@@ -79,7 +79,7 @@ Not included yet:
 | Biteship | Implemented | Yes | No | Postal code |
 | EasyPost | Implemented | Yes | No | Flat address (postal code + state + city) |
 | Shippo | Implemented | Yes | No | Flat address (postal code + state + city) |
-| Easyship | Implemented | Yes | No | Flat address + provider metadata (`metadata.easyship`) |
+| Easyship | Implemented | Yes | Yes (alpha) | Flat address + `items[]` + provider metadata (`metadata.easyship`) |
 
 ## Fastest first quote
 
@@ -258,7 +258,7 @@ Providers do not all accept the same kind of location input:
 - RajaOngkir relies on hierarchy and provider-owned mapping data
 - Biteship currently relies on postal code lookup
 - EasyPost and Shippo use a flat address model; supply `countryCode`, `postalCode`, `level1`, and `level2`
-- Easyship starts from the same flat address subset, but its current alpha path also uses provider-local `metadata.easyship` fields for address/item details
+- Easyship starts from the same flat address subset, but its international alpha path also requires `request.items[]` for customs data and uses provider-local `metadata.easyship` fields for address/incoterms details
 
 OngkirHub normalizes the request contract, but frontend address-entry and refinement UX still belong to the consuming application. OngkirHub stops at quote success or structured error; applications decide how to collect better location input, retry, or remediate provider-specific failures.
 
@@ -294,7 +294,7 @@ export EASYSHIP_DEBUG=1
 | `@ongkirhub/provider-biteship` | Biteship courier aggregator rates |
 | `@ongkirhub/provider-easypost` | EasyPost multi-carrier rates (domestic alpha) |
 | `@ongkirhub/provider-shippo` | Shippo multi-carrier rates (domestic alpha) |
-| `@ongkirhub/provider-easyship` | Easyship multi-carrier rates (domestic alpha) |
+| `@ongkirhub/provider-easyship` | Easyship multi-carrier rates (domestic + international alpha) |
 | `@ongkirhub/location-google` | Google Places location normalization (optional) |
 
 Dependency direction:
@@ -354,7 +354,7 @@ It demonstrates `createOngkirHub()` with `@ongkirhub/provider-shippo`, calling `
 
 **Note:** Shippo test mode may return placeholder/sample rates. This example is for integration validation, not real-price validation.
 
-### Easyship smoke example
+### Easyship smoke examples
 
 A minimal Easyship runtime example lives in `examples/easyship-smoke`:
 
@@ -365,7 +365,14 @@ EASYSHIP_API_KEY=your_key pnpm start
 
 It demonstrates `createOngkirHub()` with `@ongkirhub/provider-easyship`, calling `hub.getQuotes()` directly with no HTTP server. The example uses a US domestic route (Beverly Hills, CA → New York, NY), includes the required parcel dimensions, and shows the current Easyship alpha request shape, including provider-local `metadata.easyship` fields for destination `line_1` and `hs_code`.
 
-**Note:** Easyship alpha is domestic-only. International and customs support is intentionally deferred.
+An international smoke example is also available in `examples/easyship-international-smoke`:
+
+```bash
+cd examples/easyship-international-smoke
+EASYSHIP_API_KEY=your_key pnpm start
+```
+
+It demonstrates a cross-country route (US → UK) with `request.items[]` for customs itemization and `metadata.easyship` for incoterms and duty calculation flags.
 
 ### Shippo
 
@@ -397,15 +404,31 @@ export EASYSHIP_API_KEY=your-api-key
 pnpm dev
 ```
 
-Easyship v0.1 is **domestic-only** and uses a flat address model. Both `origin` and `destination` should include `countryCode`, `postalCode`, `level1` (state), and `level2` (city). Parcels must include `weightGrams` and `dimensions` (`lengthCm`, `widthCm`, `heightCm`).
+Easyship v0.1 uses a flat address model. Both `origin` and `destination` should include `countryCode`, `postalCode`, `level1` (state), and `level2` (city). Parcels must include `weightGrams` and `dimensions` (`lengthCm`, `widthCm`, `heightCm`).
 
-For the current alpha, Easyship also uses a provider-local metadata escape hatch:
+**Domestic:** Easyship works without `request.items` by synthesizing a single placeholder item.
+
+**International (alpha):** Cross-country quotes require `request.items` with real customs data:
+
+```ts
+items: [
+  {
+    description: "Ceramic teapot",
+    quantity: 1,
+    weightGrams: 500,
+    declaredValue: { amount: 35.0, currency: "USD" },
+    hsCode: "691200",
+    originCountryCode: "US"
+  }
+]
+```
+
+For the current alpha, Easyship also uses a provider-local metadata escape hatch for flags that do not generalize across providers:
 
 ```ts
 metadata: {
   easyship: {
     destinationLine1: "350 5th Ave",
-    hsCode: "49011000",
     setAsResidential: false,
     calculateTaxAndDuties: true,
     incoterms: "DDU"
@@ -413,7 +436,7 @@ metadata: {
 }
 ```
 
-This keeps the shared `QuoteRequest` contract stable while allowing the Easyship provider to supply the item/address details its rates endpoint currently expects. International and customs semantics are still intentionally deferred at the shared-contract level.
+This keeps the shared `QuoteRequest` contract stable while allowing the Easyship provider to supply the address and incoterms details its rates endpoint expects. Provider-specific customs admin (certification, EEI, restrictions) remains intentionally deferred at the shared-contract level.
 
 The typed helper for that provider-local metadata is exported from `@ongkirhub/provider-easyship` as `EasyshipRequestMetadata`.
 
