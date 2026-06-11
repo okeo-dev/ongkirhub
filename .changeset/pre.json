@@ -1,0 +1,26 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "ongkirhub": "0.1.0",
+    "@ongkirhub/core": "0.1.0",
+    "@ongkirhub/runtime": "0.1.0",
+    "@ongkirhub/client": "0.1.0",
+    "@ongkirhub/react": "0.1.0",
+    "@ongkirhub/react-api": "0.1.0",
+    "@ongkirhub/location-google": "0.1.0",
+    "@ongkirhub/api": "0.1.0",
+    "@ongkirhub/provider-mock": "0.1.0",
+    "@ongkirhub/provider-manual": "0.1.0",
+    "@ongkirhub/provider-rajaongkir": "0.1.0",
+    "@ongkirhub/provider-biteship": "0.1.0",
+    "@ongkirhub/provider-easypost": "0.1.0",
+    "@ongkirhub/provider-shippo": "0.1.0",
+    "@ongkirhub/provider-easyship": "0.1.0",
+    "@ongkirhub/widget": "0.1.0"
+  },
+  "changesets": [
+    "alpha-platform-surface",
+    "alpha-provider-surface"
+  ]
+}

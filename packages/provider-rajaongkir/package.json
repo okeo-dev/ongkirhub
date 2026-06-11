@@ -1,6 +1,6 @@
 {
   "name": "@ongkirhub/provider-rajaongkir",
-  "version": "0.1.0",
+  "version": "0.1.1-alpha.0",
   "description": "RajaOngkir shipping provider for OngkirHub",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,9 +11,12 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "src/location/generated"],
+  "files": [
+    "dist",
+    "src/location/generated"
+  ],
   "scripts": {
-    "compile:locations": "tsx src/location/compile.ts",
+    "compile:locations": "node --import tsx src/location/compile.ts",
     "build": "pnpm run compile:locations && tsc -p tsconfig.json",
     "test": "vitest run",
     "lint": "tsc -p tsconfig.json --noEmit",

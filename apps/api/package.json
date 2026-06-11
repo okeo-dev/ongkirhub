@@ -1,6 +1,6 @@
 {
   "name": "@ongkirhub/api",
-  "version": "0.1.0",
+  "version": "0.1.1-alpha.0",
   "description": "HTTP API for OngkirHub shipping quotes",
   "type": "module",
   "main": "./dist/lib.js",
@@ -22,7 +22,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "test": "vitest run",
+    "test": "NODE_OPTIONS='--max-old-space-size=8192' vitest run",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist"

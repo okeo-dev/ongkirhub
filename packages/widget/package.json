@@ -1,7 +1,8 @@
 {
-  "name": "@ongkirhub/provider-easyship",
-  "version": "0.1.1-alpha.0",
-  "description": "Easyship shipping provider for OngkirHub",
+  "name": "@ongkirhub/widget",
+  "version": "0.1.0",
+  "description": "Embeddable vanilla-JS shipping calculator widget for OngkirHub",
+  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,20 +13,22 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "bundle"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/build-browser.js",
     "test": "vitest run",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist bundle"
   },
   "dependencies": {
-    "@ongkirhub/core": "workspace:*"
+    "@ongkirhub/client": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.10.7",
+    "esbuild": "^0.25.0",
+    "jsdom": "^26.0.0",
     "typescript": "^5.7.3",
     "vitest": "^3.0.5"
   }

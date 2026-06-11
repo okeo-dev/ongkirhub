@@ -179,9 +179,12 @@ export function compileDefaultLocationSource(): ProviderLocationRecord[] {
   return records;
 }
 
+const scriptPath = fileURLToPath(import.meta.url);
 const isMainModule =
   process.argv[1] !== undefined &&
-  fileURLToPath(import.meta.url) === process.argv[1];
+  (process.argv[1] === scriptPath ||
+    process.argv[1].endsWith("/compile.ts") ||
+    process.argv[1].endsWith("\\compile.ts"));
 
 if (isMainModule) {
   compileDefaultLocationSource();
