@@ -38,9 +38,16 @@ const defaultParcel = {
 };
 
 function makeShippoShipmentResponse(rates: unknown[], messages?: unknown[]) {
+  const body = JSON.stringify({
+    object_id: "shp_test",
+    object_status: "SUCCESS",
+    rates,
+    messages: messages ?? [],
+  });
   return {
     ok: true,
     status: 200,
+    text: async () => body,
     json: async () => ({
       object_id: "shp_test",
       object_status: "SUCCESS",
@@ -303,7 +310,7 @@ describe("createShippoProvider", () => {
     ).rejects.toMatchObject({ code: "LOCATION_NOT_FOUND" });
   });
 
-  it("throws for cross-country routes", async () => {
+  it("throws INVALID_REQUEST for cross-country routes without items", async () => {
     const provider = createShippoProvider(baseConfig);
     await expect(
       provider.getQuotes({
@@ -312,7 +319,137 @@ describe("createShippoProvider", () => {
         parcels: [defaultParcel],
         totalWeightGrams: 1000,
       }),
-    ).rejects.toMatchObject({ code: "UNSUPPORTED_ROUTE" });
+    ).rejects.toMatchObject({ code: "INVALID_REQUEST" });
+  });
+
+  it("accepts cross-country routes when request.items is provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      makeShippoShipmentResponse([
+        makeShippoRate({
+          provider: "USPS",
+          amount: "45.00",
+          servicelevel: {
+            name: "Priority Mail International",
+            token: "usps_priority_international",
+          },
+          days: 5,
+        }),
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = createShippoProvider(baseConfig);
+    const quotes = await provider.getQuotes({
+      origin: usOrigin,
+      destination: { ...usDestination, countryCode: "CA", postalCode: "M5V 3A8", level1: "ON", level2: "Toronto" },
+      parcels: [defaultParcel],
+      totalWeightGrams: 1000,
+      items: [
+        {
+          description: "Handmade ceramic mug",
+          quantity: 2,
+          weightGrams: 500,
+          declaredValue: { amount: 25.0, currency: "USD" },
+          hsCode: "691200",
+          originCountryCode: "US",
+        },
+      ],
+      metadata: {
+        shippo: {
+          originLine1: "123 Example St",
+          destinationLine1: "456 Maple Ave",
+          originPhone: "+1-555-0100",
+          destinationPhone: "+1-555-0200",
+        },
+      },
+    });
+
+    expect(quotes).toHaveLength(1);
+    expect(quotes[0]?.price.amount).toBe(45.0);
+
+    const [, requestInit] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(requestInit?.body as string);
+    expect(body.customs_declaration).toMatchObject({
+      certify: true,
+      certify_signer: "-",
+      contents_type: "MERCHANDISE",
+      items: [
+        {
+          description: "Handmade ceramic mug",
+          quantity: 2,
+          net_weight: "500",
+          mass_unit: "g",
+          value_amount: "25",
+          value_currency: "USD",
+          origin_country: "US",
+          hs_code: "691200",
+        },
+      ],
+    });
+  });
+
+  it("passes shippo metadata through request metadata", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      makeShippoShipmentResponse([
+        makeShippoRate({
+          provider: "USPS",
+          amount: "45.00",
+          servicelevel: {
+            name: "Priority Mail International",
+            token: "usps_priority_international",
+          },
+          days: 5,
+        }),
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = createShippoProvider(baseConfig);
+    await provider.getQuotes({
+      origin: usOrigin,
+      destination: { ...usDestination, countryCode: "CA", postalCode: "M5V 3A8", level1: "ON", level2: "Toronto" },
+      parcels: [defaultParcel],
+      totalWeightGrams: 1000,
+      items: [
+        {
+          description: "Tea",
+          quantity: 1,
+          weightGrams: 200,
+          declaredValue: { amount: 10, currency: "USD" },
+        },
+      ],
+      metadata: {
+        shippo: {
+          originLine1: "123 Example St",
+          destinationLine1: "456 Maple Ave",
+          originPhone: "+1-555-0100",
+          destinationPhone: "+1-555-0200",
+          certify: true,
+          certifySigner: "Jane Doe",
+          contentsType: "GIFT",
+          contentsExplanation: "Birthday gift",
+          eelPfc: "NOEEI_30_37_A",
+        },
+      },
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(requestInit?.body as string);
+    expect(body.address_from).toMatchObject({
+      street1: "123 Example St",
+      phone: "+1-555-0100",
+    });
+    expect(body.address_to).toMatchObject({
+      street1: "456 Maple Ave",
+      phone: "+1-555-0200",
+    });
+    expect(body.customs_declaration).toMatchObject({
+      certify: true,
+      certify_signer: "Jane Doe",
+      contents_type: "GIFT",
+      contents_explanation: "Birthday gift",
+      eel_pfc: "NOEEI_30_37_A",
+    });
   });
 
   it("maps upstream auth failures to ProviderError", async () => {
@@ -321,6 +458,7 @@ describe("createShippoProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 401,
+        text: async () => JSON.stringify({ detail: "Authentication credentials were not provided." }),
         json: async () => ({
           detail: "Authentication credentials were not provided.",
         }),
@@ -344,6 +482,7 @@ describe("createShippoProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 429,
+        text: async () => JSON.stringify({ messages: [{ source: "API", code: "429", text: "Rate limit exceeded" }] }),
         json: async () => ({
           messages: [{ source: "API", code: "429", text: "Rate limit exceeded" }],
         }),
@@ -367,6 +506,7 @@ describe("createShippoProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 503,
+        text: async () => JSON.stringify({ messages: [{ source: "API", code: "503", text: "Service unavailable" }] }),
         json: async () => ({
           messages: [{ source: "API", code: "503", text: "Service unavailable" }],
         }),
@@ -390,6 +530,7 @@ describe("createShippoProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
+        text: async () => JSON.stringify({ messages: [{ source: "API", code: "400", text: "Invalid address: zip code not found" }] }),
         json: async () => ({
           messages: [
             {
@@ -419,6 +560,7 @@ describe("createShippoProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
+        text: async () => JSON.stringify({ messages: [{ source: "API", code: "400", text: "Country code XX is not supported" }] }),
         json: async () => ({
           messages: [
             {
@@ -448,6 +590,7 @@ describe("createShippoProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 400,
+        text: async () => JSON.stringify({ messages: [{ source: "API", code: "400", text: "Parcel weight is required" }] }),
         json: async () => ({
           messages: [
             {
@@ -477,6 +620,7 @@ describe("createShippoProvider", () => {
       vi.fn().mockResolvedValue({
         ok: false,
         status: 418,
+        text: async () => JSON.stringify({ messages: [{ source: "API", code: "418", text: "I'm a teapot" }] }),
         json: async () => ({
           messages: [{ source: "API", code: "418", text: "I'm a teapot" }],
         }),
@@ -500,6 +644,13 @@ describe("createShippoProvider", () => {
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
+        text: async () =>
+          JSON.stringify({
+            object_id: "shp_test",
+            object_status: "ERROR",
+            rates: [],
+            messages: [{ source: "API", code: "400", text: "Parcel weight is required" }],
+          }),
         json: async () => ({
           object_id: "shp_test",
           object_status: "ERROR",
@@ -527,23 +678,25 @@ describe("createShippoProvider", () => {
   });
 
   it("ignores non-error messages on HTTP 200 when rates are present", async () => {
+    const payload = {
+      object_id: "shp_test",
+      object_status: "SUCCESS",
+      rates: [
+        makeShippoRate({
+          object_id: "rate_1",
+          amount: "5.00",
+          currency: "USD",
+        }),
+      ],
+      messages: [{ source: "API", text: "Test mode: sample rates returned" }],
+    };
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ({
-          object_id: "shp_test",
-          object_status: "SUCCESS",
-          rates: [
-            makeShippoRate({
-              object_id: "rate_1",
-              amount: "5.00",
-              currency: "USD",
-            }),
-          ],
-          messages: [{ source: "API", text: "Test mode: sample rates returned" }],
-        }),
+        text: async () => JSON.stringify(payload),
+        json: async () => payload,
       }),
     );
 
@@ -618,6 +771,81 @@ describe("createShippoProvider", () => {
         parcels: [defaultParcel],
         totalWeightGrams: 1000,
       },
+    });
+  });
+
+  it("throws INVALID_REQUEST when international metadata.shippo.originPhone is missing", async () => {
+    const provider = createShippoProvider(baseConfig);
+    await expect(
+      provider.getQuotes({
+        origin: usOrigin,
+        destination: {
+          ...usDestination,
+          countryCode: "CA",
+          postalCode: "M5V 3A8",
+          level1: "ON",
+          level2: "Toronto",
+        },
+        parcels: [defaultParcel],
+        totalWeightGrams: 1000,
+        items: [
+          {
+            description: "Handmade ceramic mug",
+            quantity: 2,
+            weightGrams: 500,
+            declaredValue: { amount: 25.0, currency: "USD" },
+            hsCode: "691200",
+            originCountryCode: "US",
+          },
+        ],
+        metadata: {
+          shippo: {
+            destinationLine1: "456 Maple Ave",
+            destinationPhone: "+1-555-0200",
+          },
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_REQUEST",
+      message: /metadata\.shippo\.originPhone/,
+    });
+  });
+
+  it("throws INVALID_REQUEST when international items omit declaredValue", async () => {
+    const provider = createShippoProvider(baseConfig);
+    await expect(
+      provider.getQuotes({
+        origin: usOrigin,
+        destination: {
+          ...usDestination,
+          countryCode: "CA",
+          postalCode: "M5V 3A8",
+          level1: "ON",
+          level2: "Toronto",
+        },
+        parcels: [defaultParcel],
+        totalWeightGrams: 1000,
+        items: [
+          {
+            description: "Handmade ceramic mug",
+            quantity: 2,
+            weightGrams: 500,
+            hsCode: "691200",
+            originCountryCode: "US",
+          },
+        ],
+        metadata: {
+          shippo: {
+            originLine1: "123 Example St",
+            destinationLine1: "456 Maple Ave",
+            originPhone: "+1-555-0100",
+            destinationPhone: "+1-555-0200",
+          },
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_REQUEST",
+      message: /items\[0\]\.declaredValue/,
     });
   });
 

@@ -21,6 +21,7 @@ export {
 export {
   createShippoProvider,
   type ShippoProvider,
+  type ShippoRequestMetadata,
 } from "./provider.js";
 export {
   SHIPPO_PROVIDER_KEY,

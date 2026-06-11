@@ -69,7 +69,7 @@ metadata: {
 
 Rules:
 
-- Keep shared fields in the normalized contract first (`origin`, `destination`, `parcels`, `declaredValue`, `items`).
+- Keep shared fields in the normalized contract first (`origin`, `destination`, `parcels`, `items`, `declaredValue`). `items` is the current alpha international path; `declaredValue` at the shipment level is retained for compatibility.
 - Only put provider-specific knobs in `metadata.<providerKey>`.
 - Export a typed metadata shape from the provider package when you rely on it (for example `EasyshipRequestMetadata`).
 - Validate and normalize provider metadata inside the provider; do not treat it as an unstructured dump.

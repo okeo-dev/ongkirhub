@@ -19,8 +19,8 @@ const hub = createOngkirHub({
 
 async function main() {
   console.log("=== OngkirHub Easyship Smoke ===\n");
-  console.log("Note: Easyship alpha is domestic-only.");
-  console.log("      International and customs support is intentionally deferred.\n");
+  console.log("Note: This example uses the Easyship domestic path.");
+  console.log("      Easyship also supports international alpha via request.items[].\n");
 
   // 1. Health check
   const health = hub.getHealth();

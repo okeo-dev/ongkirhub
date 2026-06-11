@@ -60,7 +60,8 @@ Included:
   - `rajaongkir`
   - `biteship`
   - `easypost` (domestic alpha)
-  - `shippo` (domestic alpha)
+  - `shippo` (domestic + international alpha)
+  - `easyship` (domestic + international alpha)
 
 Not included yet:
 
@@ -78,7 +79,7 @@ Not included yet:
 | RajaOngkir | Implemented | Yes | Yes | Hierarchy / provider mapping |
 | Biteship | Implemented | Yes | No | Postal code |
 | EasyPost | Implemented | Yes | No | Flat address (postal code + state + city) |
-| Shippo | Implemented | Yes | No | Flat address (postal code + state + city) |
+| Shippo | Implemented | Yes | Yes (alpha) | Flat address + `items[]` + provider metadata (`metadata.shippo`) |
 | Easyship | Implemented | Yes | Yes (alpha) | Flat address + `items[]` + provider metadata (`metadata.easyship`) |
 
 ## Fastest first quote
@@ -134,6 +135,20 @@ Example response:
 
 ```json
 {
+  "requestSummary": {
+    "origin": {
+      "method": "location",
+      "countryCode": "ID",
+      "level1": "DKI Jakarta",
+      "level2": "Jakarta Pusat"
+    },
+    "destination": {
+      "method": "location",
+      "countryCode": "ID",
+      "level1": "Jawa Barat",
+      "level2": "Bandung"
+    }
+  },
   "quotes": [
     {
       "providerKey": "mock",
@@ -153,7 +168,7 @@ Example response:
 }
 ```
 
-If you want a real provider next, enable RajaOngkir, Biteship, EasyPost, or Shippo below.
+If you want a real provider next, enable RajaOngkir, Biteship, EasyPost, Shippo, or Easyship below.
 
 ## Common adoption paths
 
@@ -258,7 +273,7 @@ Providers do not all accept the same kind of location input:
 - RajaOngkir relies on hierarchy and provider-owned mapping data
 - Biteship currently relies on postal code lookup
 - EasyPost and Shippo use a flat address model; supply `countryCode`, `postalCode`, `level1`, and `level2`
-- Easyship starts from the same flat address subset, but its international alpha path also requires `request.items[]` for customs data and uses provider-local `metadata.easyship` fields for address/incoterms details
+- Easyship and Shippo start from the same flat address subset, but their international alpha paths also require `request.items[]` for customs data and use provider-local metadata for address/incoterms details
 
 OngkirHub normalizes the request contract, but frontend address-entry and refinement UX still belong to the consuming application. OngkirHub stops at quote success or structured error; applications decide how to collect better location input, retry, or remediate provider-specific failures.
 
@@ -293,7 +308,7 @@ export EASYSHIP_DEBUG=1
 | `@ongkirhub/provider-rajaongkir` | RajaOngkir domestic and international rates |
 | `@ongkirhub/provider-biteship` | Biteship courier aggregator rates |
 | `@ongkirhub/provider-easypost` | EasyPost multi-carrier rates (domestic alpha) |
-| `@ongkirhub/provider-shippo` | Shippo multi-carrier rates (domestic alpha) |
+| `@ongkirhub/provider-shippo` | Shippo multi-carrier rates (domestic + international alpha) |
 | `@ongkirhub/provider-easyship` | Easyship multi-carrier rates (domestic + international alpha) |
 | `@ongkirhub/location-google` | Google Places location normalization (optional) |
 
@@ -387,9 +402,44 @@ export SHIPPO_API_KEY=your-api-key
 pnpm dev
 ```
 
-Shippo v0.1 is **domestic-only** and uses a flat address model. Both `origin` and `destination` should include `countryCode`, `postalCode`, `level1` (state), and `level2` (city). Parcels must include `weightGrams` and `dimensions` (`lengthCm`, `widthCm`, `heightCm`).
+Shippo v0.1 uses a flat address model. Both `origin` and `destination` should include `countryCode`, `postalCode`, `level1` (state), and `level2` (city). Parcels must include `weightGrams` and `dimensions` (`lengthCm`, `widthCm`, `heightCm`). Shippo test mode may return placeholder/sample rates; it is useful for integration validation, not for validating real-world shipping prices.
 
-**Important:** Shippo test mode may return placeholder/sample rates. It is useful for integration validation, not for validating real-world shipping prices. For production-rate validation, use a live Shippo token and do not purchase labels.
+**Domestic:** Works without `request.items`.
+
+**International (alpha):** Cross-country quotes require `request.items` with real customs data:
+
+```ts
+items: [
+  {
+    description: "Ceramic teapot",
+    quantity: 1,
+    weightGrams: 500,
+    declaredValue: { amount: 35.0, currency: "USD" },
+    hsCode: "691200",
+    originCountryCode: "US"
+  }
+]
+```
+
+For the current alpha, Shippo also uses provider-local metadata for address lines, phone numbers, and customs declaration fields:
+
+```ts
+metadata: {
+  shippo: {
+    originLine1: "123 Example St",
+    destinationLine1: "456 Maple Ave",
+    originPhone: "+1-555-0100",
+    destinationPhone: "+1-555-0200",
+    certify: true,
+    certifySigner: "Jane Doe",
+    contentsType: "MERCHANDISE",
+    contentsExplanation: "T-shirt purchase",
+    eelPfc: "NOEEI_30_37_A"
+  }
+}
+```
+
+**Important:** For production-rate validation, use a live Shippo token and do not purchase labels.
 
 ### Easyship
 

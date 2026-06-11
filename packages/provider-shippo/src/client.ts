@@ -69,6 +69,7 @@ export interface ShippoShipment {
 export interface ShippoErrorPayload {
   messages?: ShippoMessage[];
   detail?: string;
+  [key: string]: unknown;
 }
 
 export interface ShippoClientConfig {
@@ -78,10 +79,38 @@ export interface ShippoClientConfig {
   debug?: boolean;
 }
 
+interface ShippoRawResponse {
+  status: number;
+  ok: boolean;
+  payload?: ShippoShipment | ShippoErrorPayload;
+  rawText?: string;
+}
+
+export interface ShippoCustomsItem {
+  description: string;
+  quantity: number;
+  net_weight: string;
+  mass_unit: string;
+  value_amount: string;
+  value_currency: string;
+  origin_country: string;
+  hs_code?: string;
+}
+
+export interface ShippoCustomsDeclaration {
+  certify: boolean;
+  certify_signer: string;
+  contents_type: string;
+  contents_explanation?: string;
+  eel_pfc?: string;
+  items: ShippoCustomsItem[];
+}
+
 export interface CreateShipmentParams {
   fromAddress: ShippoAddress;
   toAddress: ShippoAddress;
   parcel: ShippoParcel;
+  customsDeclaration?: ShippoCustomsDeclaration;
 }
 
 function encodeAuth(apiKey: string): string {
@@ -108,43 +137,64 @@ export class ShippoClient {
       address_to: params.toAddress,
       parcels: [params.parcel],
       async: false,
+      ...(params.customsDeclaration
+        ? { customs_declaration: params.customsDeclaration }
+        : {}),
     });
 
     if (this.debug) {
-      console.log("[shippo] request", {
-        url: `${this.baseUrl}/shipments`,
-        fromAddress: params.fromAddress,
-        toAddress: params.toAddress,
-        parcel: params.parcel,
-      });
+      console.dir(
+        {
+          shippoRequest: {
+            url: `${this.baseUrl}/shipments`,
+            fromAddress: params.fromAddress,
+            toAddress: params.toAddress,
+            parcel: params.parcel,
+            customsDeclaration: params.customsDeclaration,
+          },
+        },
+        { depth: null },
+      );
     }
 
     const response = await this.fetchFn(`${this.baseUrl}/shipments`, {
       method: "POST",
       headers: {
+        accept: "application/json",
         authorization: encodeAuth(this.apiKey),
         "content-type": "application/json",
       },
       body,
     });
 
-    const payload = (await response.json()) as ShippoShipment | ShippoErrorPayload;
+    const parsed = await readResponse(response);
 
     if (this.debug) {
       console.dir(
         {
-          status: response.status,
-          ok: response.ok,
-          payload,
+          shippoResponse: parsed,
         },
         { depth: null },
       );
     }
 
     if (!response.ok) {
-      throw mapHttpFailure(response.status, payload as ShippoErrorPayload);
+      throw mapHttpFailure(
+        parsed.status,
+        parsed.payload as ShippoErrorPayload | undefined,
+        parsed.rawText,
+      );
     }
 
+    if (!parsed.payload) {
+      throw new ProviderError(
+        "UPSTREAM_UNAVAILABLE",
+        "Shippo returned a non-JSON response",
+        { providerKey: "shippo" },
+      );
+    }
+
+    const payload = parsed.payload;
     if (!isShipment(payload)) {
       throw new ProviderError(
         "UNKNOWN_PROVIDER_FAILURE",
@@ -159,6 +209,34 @@ export class ShippoClient {
     }
 
     return payload;
+  }
+}
+
+async function readResponse(response: Response): Promise<ShippoRawResponse> {
+  const rawText = await response.text();
+  const trimmed = rawText.trim();
+
+  if (trimmed === "") {
+    return {
+      status: response.status,
+      ok: response.ok,
+      rawText,
+    };
+  }
+
+  try {
+    return {
+      status: response.status,
+      ok: response.ok,
+      payload: JSON.parse(trimmed) as ShippoShipment | ShippoErrorPayload,
+      rawText,
+    };
+  } catch {
+    return {
+      status: response.status,
+      ok: response.ok,
+      rawText,
+    };
   }
 }
 
@@ -197,9 +275,53 @@ function joinMessages(messages: ShippoMessage[] | undefined): string {
   return messages.map((m) => m.text).filter(Boolean).join("; ");
 }
 
+function flattenValidationMessages(value: unknown, path = ""): string[] {
+  if (typeof value === "string" && value.trim() !== "") {
+    return [path ? `${path}: ${value}` : value];
+  }
+
+  if (Array.isArray(value)) {
+    const flattened = value.flatMap((entry) =>
+      flattenValidationMessages(entry, path),
+    );
+    return flattened;
+  }
+
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).flatMap(
+      ([key, nested]) => {
+        const nextPath = path ? `${path}.${key}` : key;
+        return flattenValidationMessages(nested, nextPath);
+      },
+    );
+  }
+
+  return [];
+}
+
+function extractErrorText(payload: ShippoErrorPayload): string {
+  const parts: string[] = [];
+
+  const messageText = joinMessages(payload.messages);
+  if (messageText) {
+    parts.push(messageText);
+  }
+
+  if (typeof payload.detail === "string" && payload.detail.trim() !== "") {
+    parts.push(payload.detail);
+  }
+
+  for (const [key, value] of Object.entries(payload)) {
+    if (key === "messages" || key === "detail") continue;
+    parts.push(...flattenValidationMessages(value, key));
+  }
+
+  return parts.join("; ");
+}
+
 function classify4xxError(payload: ShippoErrorPayload): ProviderErrorCode {
   const messages = payload.messages ?? [];
-  const allText = messages.map((m) => m.text.toLowerCase()).join(" ");
+  const allText = extractErrorText(payload).toLowerCase();
   const allCodes = new Set(
     messages.map((m) => m.code?.trim().toLowerCase() ?? "").filter(Boolean),
   );
@@ -273,33 +395,40 @@ function mapSoftError(message: ShippoMessage): ProviderError {
 
 function mapHttpFailure(
   status: number,
-  payload: ShippoErrorPayload,
+  payload: ShippoErrorPayload | undefined,
+  rawText?: string,
 ): ProviderError {
-  const message =
-    joinMessages(payload.messages) ||
-    payload.detail ||
-    `Shippo request failed with status ${status}`;
+  const message = payload
+    ? extractErrorText(payload)
+    : undefined;
+
+  const fallbackMessage =
+    rawText && rawText.trim() !== ""
+      ? `Shippo returned a non-JSON error response (status ${status})`
+      : `Shippo request failed with status ${status}`;
+
+  const finalMessage = message || fallbackMessage;
 
   if (status === 401 || status === 403) {
-    return new ProviderError("UPSTREAM_AUTH_FAILURE", message, {
+    return new ProviderError("UPSTREAM_AUTH_FAILURE", finalMessage, {
       providerKey: "shippo",
     });
   }
   if (status === 429) {
-    return new ProviderError("UPSTREAM_RATE_LIMIT", message, {
+    return new ProviderError("UPSTREAM_RATE_LIMIT", finalMessage, {
       providerKey: "shippo",
     });
   }
   if (status >= 500) {
-    return new ProviderError("UPSTREAM_UNAVAILABLE", message, {
+    return new ProviderError("UPSTREAM_UNAVAILABLE", finalMessage, {
       providerKey: "shippo",
     });
   }
 
   const code =
-    status >= 400 && status < 500
+    status >= 400 && status < 500 && payload
       ? classify4xxError(payload)
       : "UNKNOWN_PROVIDER_FAILURE";
 
-  return new ProviderError(code, message, { providerKey: "shippo" });
+  return new ProviderError(code, finalMessage, { providerKey: "shippo" });
 }
